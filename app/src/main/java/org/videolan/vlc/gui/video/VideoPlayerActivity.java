@@ -684,6 +684,13 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
         /* Stop the earliest possible to avoid vout error */
         if (isFinishing())
             stopPlayback();
+
+        if (subChanger != null && !subChanger.isUnsubscribed()) {
+            subChanger.unsubscribe();
+        }
+        if (subRemover != null && !subRemover.isUnsubscribed()) {
+            subRemover.unsubscribe();
+        }
     }
 
     @Override
