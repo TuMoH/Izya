@@ -26,7 +26,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -48,7 +47,6 @@ import android.support.v4.view.GravityCompat;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.widget.SearchView;
-import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -63,16 +61,15 @@ import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import org.videolan.libvlc.util.AndroidUtil;
 import com.timursoft.izya.BuildConfig;
-import org.videolan.vlc.PlaybackService;
 import com.timursoft.izya.R;
-import org.videolan.vlc.StartActivity;
+
+import org.videolan.libvlc.util.AndroidUtil;
+import org.videolan.vlc.PlaybackService;
 import org.videolan.vlc.VLCApplication;
 import org.videolan.vlc.extensions.ExtensionListing;
 import org.videolan.vlc.extensions.ExtensionManagerService;
 import org.videolan.vlc.extensions.api.VLCExtensionItem;
-import org.videolan.vlc.gui.audio.AudioBrowserFragment;
 import org.videolan.vlc.gui.browser.BaseBrowserFragment;
 import org.videolan.vlc.gui.browser.ExtensionBrowser;
 import org.videolan.vlc.gui.browser.FileBrowserFragment;
@@ -80,9 +77,8 @@ import org.videolan.vlc.gui.browser.MediaBrowserFragment;
 import org.videolan.vlc.gui.browser.NetworkBrowserFragment;
 import org.videolan.vlc.gui.helpers.SearchSuggestionsAdapter;
 import org.videolan.vlc.gui.helpers.UiTools;
-import org.videolan.vlc.gui.network.MRLPanelFragment;
 import org.videolan.vlc.gui.preferences.PreferencesActivity;
-import org.videolan.vlc.gui.preferences.PreferencesFragment;
+import org.videolan.vlc.gui.torrent.TorrentBrowserFragment;
 import org.videolan.vlc.gui.video.VideoGridFragment;
 import org.videolan.vlc.gui.video.VideoListAdapter;
 import org.videolan.vlc.gui.view.HackyDrawerLayout;
@@ -245,9 +241,6 @@ public class MainActivity extends AudioPlayerContainerActivity implements Filter
 //            MenuItem item = mNavigationView.getMenu().findItem(R.id.nav_directories);
 //            item.setTitle(R.string.open);
 //        }
-
-        mNavigationView.getMenu().findItem(R.id.nav_history).setVisible(mSettings.getBoolean(PreferencesFragment.PLAYBACK_HISTORY, true));
-
 
         if (AndroidUtil.isLolliPopOrLater())
             mNavigationView.setPadding(0, mNavigationView.getPaddingTop()/2, 0, 0);
@@ -457,16 +450,10 @@ public class MainActivity extends AudioPlayerContainerActivity implements Filter
         if (frag != null)
             return frag;
         switch (id) {
-            case R.id.nav_audio:
-                return new AudioBrowserFragment();
             case R.id.nav_directories:
                 return new FileBrowserFragment();
-            case R.id.nav_history:
-                return new HistoryFragment();
-            case R.id.nav_mrl:
-                return new MRLPanelFragment();
-            case R.id.nav_network:
-                return new NetworkBrowserFragment();
+            case R.id.nav_torrent:
+                return new TorrentBrowserFragment();
             default:
                 return new VideoGridFragment();
         }
@@ -591,7 +578,7 @@ public class MainActivity extends AudioPlayerContainerActivity implements Filter
             menu.findItem(R.id.ml_menu_save).setVisible(false);
         if (current instanceof IHistory)
             menu.findItem(R.id.ml_menu_clean).setVisible(!((IHistory) current).isEmpty());
-        boolean showLast = current instanceof AudioBrowserFragment || current instanceof VideoGridFragment;
+        boolean showLast = current instanceof VideoGridFragment;
         menu.findItem(R.id.ml_menu_last_playlist).setVisible(showLast);
         return true;
     }
@@ -632,10 +619,8 @@ public class MainActivity extends AudioPlayerContainerActivity implements Filter
                 break;
             // Restore last playlist
             case R.id.ml_menu_last_playlist:
-                boolean audio = current instanceof AudioBrowserFragment;
-                    Intent i = new Intent(audio ? PlaybackService.ACTION_REMOTE_LAST_PLAYLIST :
-                           PlaybackService.ACTION_REMOTE_LAST_VIDEO_PLAYLIST);
-                    sendBroadcast(i);
+                Intent i = new Intent(PlaybackService.ACTION_REMOTE_LAST_VIDEO_PLAYLIST);
+                sendBroadcast(i);
                 break;
             case android.R.id.home:
                 /* Toggle the sidebar */
@@ -898,16 +883,10 @@ public class MainActivity extends AudioPlayerContainerActivity implements Filter
                 return ID_ABOUT;
             case R.id.nav_settings:
                 return ID_PREFERENCES;
-            case R.id.nav_audio:
-                return ID_AUDIO;
             case R.id.nav_directories:
                 return ID_DIRECTORIES;
-            case R.id.nav_history:
-                return ID_HISTORY;
-            case R.id.nav_mrl:
-                return ID_MRL;
-            case R.id.nav_network:
-                return ID_NETWORK;
+            case R.id.nav_torrent:
+                return ID_TORRENT;
             default:
                 return ID_VIDEO;
         }

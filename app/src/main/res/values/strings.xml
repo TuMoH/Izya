@@ -24,6 +24,11 @@
         <item quantity="other">%d results found</item>
     </plurals>
 
+    <string name="find_torrent">Find Torrent…</string>
+    <string name="dialog_add_torrent_link_title">Enter the magnet or HTTP/HTTPS link</string>
+    <string name="error_empty_torrent_link">Please enter link</string>
+    <string name="error_invalid_torrent_link">Invalid link</string>
+
     <string name="play">Play</string>
     <string name="play_from_start">Play from start</string>
     <string name="play_as_audio">Play as audio</string>

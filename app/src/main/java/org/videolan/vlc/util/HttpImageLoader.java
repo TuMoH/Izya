@@ -32,7 +32,6 @@ import android.graphics.drawable.BitmapDrawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.Nullable;
-import android.support.v17.leanback.widget.ImageCardView;
 import android.support.v4.util.SimpleArrayMap;
 import android.view.View;
 import android.widget.ImageView;
@@ -139,9 +138,7 @@ public class HttpImageLoader implements Callbacks {
             sHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    if (target instanceof ImageCardView)
-                        ((ImageCardView) target).setMainImage(new BitmapDrawable(target.getResources(), bitmap));
-                    else if (target instanceof ImageView)
+                    if (target instanceof ImageView)
                         ((ImageView) target).setImageBitmap(bitmap);
                     else if (target instanceof TextView)
                         target.setBackgroundDrawable(new BitmapDrawable(target.getResources(), bitmap));

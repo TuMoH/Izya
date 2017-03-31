@@ -37,7 +37,6 @@ import android.support.v4.app.FragmentManager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.view.View;
 
 import com.timursoft.izya.R;
 
@@ -55,11 +54,8 @@ public class AudioPlayerContainerActivity extends AppCompatActivity implements P
     public static final String ACTION_SHOW_PLAYER = Strings.buildPkgString("gui.ShowPlayer");
 
     protected static final String ID_VIDEO = "video";
-    protected static final String ID_AUDIO = "audio";
-    protected static final String ID_NETWORK = "network";
+    protected static final String ID_TORRENT = "torrent";
     protected static final String ID_DIRECTORIES = "directories";
-    protected static final String ID_HISTORY = "history";
-    protected static final String ID_MRL = "mrl";
     protected static final String ID_PREFERENCES = "preferences";
     protected static final String ID_ABOUT = "about";
 
@@ -132,11 +128,7 @@ public class AudioPlayerContainerActivity extends AppCompatActivity implements P
             ((IRefreshable) current).refresh();
         else
             MediaLibrary.getInstance().scanMediaItems();
-        Fragment fragment = fm.findFragmentByTag(ID_AUDIO);
-        if (fragment != null && !fragment.equals(current)) {
-            ((MediaBrowserFragment) fragment).clear();
-        }
-        fragment = fm.findFragmentByTag(ID_VIDEO);
+        Fragment fragment = fm.findFragmentByTag(ID_VIDEO);
         if (fragment != null && !fragment.equals(current)) {
             ((MediaBrowserFragment) fragment).clear();
         }

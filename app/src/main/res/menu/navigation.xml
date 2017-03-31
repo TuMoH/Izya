@@ -11,29 +11,15 @@
         android:icon="@drawable/ic_menu_video" />
 
     <item
-        android:id="@+id/nav_audio"
-        android:title="@string/audio"
-        android:icon="@drawable/ic_menu_audio" />
-
-    <item
         android:id="@+id/nav_directories"
         android:title="@string/directories"
         android:icon="@drawable/ic_menu_folder" />
 
     <item
-        android:id="@+id/nav_network"
-        android:title="@string/network_browsing"
-        android:icon="@drawable/ic_menu_network" />
-
-    <item
-        android:id="@+id/nav_mrl"
-        android:title="@string/open_mrl"
+        android:id="@+id/nav_torrent"
+        android:title="@string/find_torrent"
         android:icon="@drawable/ic_menu_goto" />
 
-    <item
-        android:id="@+id/nav_history"
-        android:title="@string/history"
-        android:icon="@drawable/ic_menu_history" />
     </group>
     <group android:id="@+id/fixed_group"
         android:checkableBehavior="single"

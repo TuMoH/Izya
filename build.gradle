@@ -9,23 +9,23 @@ buildscript {
 }
 
 ext {
-    buildTools = "25.0.2"
+    buildTools = '25.0.2'
     targetSdk = 25
     compileSdk = 25
     minSdk = 17
 
-    supportLibrary = "25.3.0"
-    dagger = "2.9"
-    rxbinding = "1.0.0"
-    rxlifecycle = "1.0"
-    permissionsdispatcher = "2.3.2"
-    retrofit = "2.2.0"
+    supportLibrary = '25.3.0'
+    dagger = '2.9'
+    rxbinding = '1.0.0'
+    retrofit = '2.2.0'
+
+    jlibtorrent = '1.2.0.6'
 }
 
 allprojects {
     repositories {
         jcenter()
-        maven { url "https://jitpack.io" }
+        maven { url 'https://jitpack.io' }
     }
 }
 

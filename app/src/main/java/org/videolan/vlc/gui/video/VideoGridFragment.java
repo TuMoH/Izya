@@ -27,15 +27,25 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Configuration;
 import android.content.res.Resources;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.TextInputEditText;
+import android.support.design.widget.TextInputLayout;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.util.ArrayMap;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.RecyclerView;
+import android.text.Editable;
+import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.Patterns;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -43,17 +53,23 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.timursoft.izya.R;
+
+import org.proninyaroslav.libretorrent.AddTorrentActivity;
+import org.proninyaroslav.libretorrent.core.utils.Utils;
 import org.videolan.libvlc.Media;
 import org.videolan.libvlc.util.AndroidUtil;
-import com.timursoft.izya.R;
 import org.videolan.vlc.VLCApplication;
 import org.videolan.vlc.gui.MainActivity;
 import org.videolan.vlc.gui.SecondaryActivity;
 import org.videolan.vlc.gui.browser.MediaBrowserFragment;
 import org.videolan.vlc.gui.helpers.UiTools;
+import org.videolan.vlc.gui.torrent.BaseDialog;
+import org.videolan.vlc.gui.view.AutoFitRecyclerView;
 import org.videolan.vlc.gui.view.ContextMenuRecyclerView;
 import org.videolan.vlc.gui.view.SwipeRefreshLayout;
 import org.videolan.vlc.interfaces.ISortable;
@@ -66,22 +82,24 @@ import org.videolan.vlc.media.MediaWrapper;
 import org.videolan.vlc.media.Thumbnailer;
 import org.videolan.vlc.util.FileUtils;
 import org.videolan.vlc.util.VLCInstance;
-import org.videolan.vlc.gui.view.AutoFitRecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class VideoGridFragment extends MediaBrowserFragment implements ISortable, IVideoBrowser, SwipeRefreshLayout.OnRefreshListener {
+public class VideoGridFragment extends MediaBrowserFragment
+        implements ISortable, IVideoBrowser, SwipeRefreshLayout.OnRefreshListener, BaseDialog.OnDialogShowListener {
 
     public final static String TAG = "VLC/VideoListFragment";
 
     public final static String KEY_GROUP = "key_group";
+    private static final String TAG_ADD_TORRENT_LINK_DIALOG = "add_torrent_link_dialog";
 
     protected LinearLayout mLayoutFlipperLoading;
     protected AutoFitRecyclerView mGridView;
     protected TextView mTextViewNomedia;
     protected View mViewNomedia;
     protected String mGroup;
+    protected FloatingActionButton addTorrentButton;
 
     private VideoListAdapter mVideoAdapter;
     private Thumbnailer mThumbnailer;
@@ -90,7 +108,8 @@ public class VideoGridFragment extends MediaBrowserFragment implements ISortable
     private MainActivity mMainActivity;
 
     /* All subclasses of Fragment must include a public empty constructor. */
-    public VideoGridFragment() { }
+    public VideoGridFragment() {
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -107,7 +126,7 @@ public class VideoGridFragment extends MediaBrowserFragment implements ISortable
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
         View v = inflater.inflate(R.layout.video_grid, container, false);
 
@@ -123,6 +142,10 @@ public class VideoGridFragment extends MediaBrowserFragment implements ISortable
 
         mGridView.addOnScrollListener(mScrollListener);
         mGridView.setAdapter(mVideoAdapter);
+
+        addTorrentButton = (FloatingActionButton) v.findViewById(R.id.add_torrent_button);
+        addTorrentButton.setOnClickListener(view -> addTorrentLinkDialog());
+
         return v;
     }
 
@@ -212,7 +235,7 @@ public class VideoGridFragment extends MediaBrowserFragment implements ISortable
         mVideoAdapter.clear();
     }
 
-    protected String getTitle(){
+    protected String getTitle() {
         if (mGroup == null)
             return getString(R.string.video);
         else
@@ -261,7 +284,7 @@ public class VideoGridFragment extends MediaBrowserFragment implements ISortable
         final MediaWrapper media = mVideoAdapter.getItem(position);
         if (media == null)
             return false;
-        switch (menu.getItemId()){
+        switch (menu.getItemId()) {
             case R.id.video_list_play_from_start:
                 playVideo(media, true);
                 return true;
@@ -279,16 +302,16 @@ public class VideoGridFragment extends MediaBrowserFragment implements ISortable
                         for (MediaWrapper item : ((MediaGroup) mw).getAll())
                             playList.add(item);
                         if (i < position)
-                            offset += ((MediaGroup)mw).size()-1;
+                            offset += ((MediaGroup) mw).size() - 1;
                     } else
                         playList.add(mw);
                 }
-                MediaUtils.openList(getActivity(), playList, position+offset);
+                MediaUtils.openList(getActivity(), playList, position + offset);
                 return true;
             case R.id.video_list_info:
                 Activity activity = getActivity();
                 if (activity instanceof MainActivity)
-                    ((MainActivity)activity).showSecondaryFragment(SecondaryActivity.MEDIA_INFO, media.getLocation());
+                    ((MainActivity) activity).showSecondaryFragment(SecondaryActivity.MEDIA_INFO, media.getLocation());
                 else {
                     Intent i = new Intent(activity, SecondaryActivity.class);
                     i.putExtra("fragment", "mediaInfo");
@@ -316,7 +339,7 @@ public class VideoGridFragment extends MediaBrowserFragment implements ISortable
                 return true;
             case R.id.video_list_append:
                 if (media instanceof MediaGroup)
-                    mService.append(((MediaGroup)media).getAll());
+                    mService.append(((MediaGroup) media).getAll());
                 else
                     mService.append(media);
                 return true;
@@ -332,7 +355,7 @@ public class VideoGridFragment extends MediaBrowserFragment implements ISortable
         if (menuInfo == null)
             return;
         // Do not show the menu of media group.
-        ContextMenuRecyclerView.RecyclerContextMenuInfo info = (ContextMenuRecyclerView.RecyclerContextMenuInfo)menuInfo;
+        ContextMenuRecyclerView.RecyclerContextMenuInfo info = (ContextMenuRecyclerView.RecyclerContextMenuInfo) menuInfo;
         MediaWrapper media = mVideoAdapter.getItem(info.position);
         if (media == null)
             return;
@@ -401,7 +424,7 @@ public class VideoGridFragment extends MediaBrowserFragment implements ISortable
                             String title = item.getTitle().substring(item.getTitle().toLowerCase().startsWith("the") ? 4 : 0);
                             if (mGroup == null || title.toLowerCase().startsWith(mGroup.toLowerCase()))
                                 displayList.add(item);
-                                jobsList.add(item);
+                            jobsList.add(item);
                         }
                     } else {
                         List<MediaGroup> groups = MediaGroup.group(itemList);
@@ -473,7 +496,7 @@ public class VideoGridFragment extends MediaBrowserFragment implements ISortable
         else // Update group item when its first element is updated
             for (int i = 0; i < mVideoAdapter.getItemCount(); ++i) {
                 if (mVideoAdapter.getItem(i) instanceof MediaGroup &&
-                        ((MediaGroup)mVideoAdapter.getItem(i)).getFirstMedia().equals(item)) {
+                        ((MediaGroup) mVideoAdapter.getItem(i)).getFirstMedia().equals(item)) {
                     final int position = i;
                     mHandler.post(new Runnable() {
                         @Override
@@ -509,7 +532,7 @@ public class VideoGridFragment extends MediaBrowserFragment implements ISortable
 
     @Override
     public void onRefresh() {
-        if (getActivity()!=null && !MediaLibrary.getInstance().isWorking())
+        if (getActivity() != null && !MediaLibrary.getInstance().isWorking())
             MediaLibrary.getInstance().scanMediaItems(true);
     }
 
@@ -527,11 +550,11 @@ public class VideoGridFragment extends MediaBrowserFragment implements ISortable
             });
     }
 
-    public void clear(){
+    public void clear() {
         mVideoAdapter.clear();
     }
 
-    public void deleteMedia(final MediaWrapper media){
+    public void deleteMedia(final MediaWrapper media) {
         VLCApplication.runBackground(new Runnable() {
             @Override
             public void run() {
@@ -547,4 +570,145 @@ public class VideoGridFragment extends MediaBrowserFragment implements ISortable
             }
         }
     }
+
+    private void addTorrentLinkDialog() {
+        if (getFragmentManager().findFragmentByTag(TAG_ADD_TORRENT_LINK_DIALOG) == null) {
+            DialogFragment dialog = BaseDialog.newInstance(
+                    getString(R.string.dialog_add_torrent_link_title),
+                    null,
+                    R.layout.dialog_text_input,
+                    getString(R.string.ok),
+                    getString(R.string.cancel),
+                    null,
+                    this);
+
+            dialog.show(getFragmentManager(), TAG_ADD_TORRENT_LINK_DIALOG);
+        }
+    }
+
+    @Override
+    public void onShow(AlertDialog dialog) {
+        if (dialog != null) {
+            if (getFragmentManager().findFragmentByTag(TAG_ADD_TORRENT_LINK_DIALOG) != null) {
+                initAddTorrentLinkDialog(dialog);
+            }
+        }
+    }
+
+    private void initAddTorrentLinkDialog(final AlertDialog dialog) {
+        final TextInputEditText field = (TextInputEditText) dialog.findViewById(R.id.text_input_dialog);
+        final TextInputLayout fieldLayout = (TextInputLayout) dialog.findViewById(R.id.layout_text_input_dialog);
+
+        field.setText("magnet:?xt=urn:btih:3307944256656f60d4847df2d90e6aef663db7d4&dn=rutor.info_Том+Шродер+-+Старые+души+%281999%29+PDF&tr=udp://opentor.org:2710&tr=udp://opentor.org:2710&tr=http://retracker.local/announce");
+
+        /* Dismiss error label if user has changed the text */
+        if (field != null && fieldLayout != null) {
+            field.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    /* Nothing */
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    fieldLayout.setErrorEnabled(false);
+                    fieldLayout.setError(null);
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    /* Nothing */
+                }
+            });
+        }
+
+        /*
+         * It is necessary in order to the dialog is not closed by
+         * pressing positive button if the text checker gave a false result
+         */
+        Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+
+        positiveButton.setOnClickListener(v -> {
+            if (field != null && fieldLayout != null) {
+                String link = field.getText().toString();
+
+                if (checkTorrentLinkEditTextField(link, fieldLayout)) {
+                    String url;
+
+                    if (link.startsWith(Utils.MAGNET_PREFIX)) {
+                        url = link;
+                    } else {
+                        url = Utils.normalizeURL(link);
+                    }
+
+                    if (url != null) {
+                        addTorrentDialog(Uri.parse(url));
+                    }
+
+                    dialog.dismiss();
+                }
+            }
+        });
+
+        /* Inserting a link from the clipboard */
+        String clipboard = Utils.getClipboard(getActivity().getApplicationContext());
+        String url;
+
+        if (clipboard != null) {
+            if (!clipboard.startsWith(Utils.MAGNET_PREFIX)) {
+                url = Utils.normalizeURL(clipboard);
+            } else {
+                url = clipboard;
+            }
+
+            if (field != null && url != null) {
+                field.setText(url);
+            }
+        }
+    }
+
+    private boolean checkTorrentLinkEditTextField(String s, TextInputLayout layout) {
+        if (s == null || layout == null) {
+            return false;
+        }
+
+        if (TextUtils.isEmpty(s)) {
+            layout.setErrorEnabled(true);
+            layout.setError(getString(R.string.error_empty_torrent_link));
+            layout.requestFocus();
+
+            return false;
+        }
+
+        if (s.startsWith(Utils.MAGNET_PREFIX)) {
+            layout.setErrorEnabled(false);
+            layout.setError(null);
+
+            return true;
+        }
+
+        if (!Patterns.WEB_URL.matcher(s).matches()) {
+            layout.setErrorEnabled(true);
+            layout.setError(getString(R.string.error_invalid_torrent_link));
+            layout.requestFocus();
+
+            return false;
+        }
+
+        layout.setErrorEnabled(false);
+        layout.setError(null);
+
+        return true;
+    }
+
+    private void addTorrentDialog(Uri uri) {
+        if (uri == null) {
+            return;
+        }
+
+        Intent i = new Intent(getContext(), AddTorrentActivity.class);
+        i.putExtra(AddTorrentActivity.TAG_URI, uri);
+        startActivityForResult(i, 1);
+    }
+
 }

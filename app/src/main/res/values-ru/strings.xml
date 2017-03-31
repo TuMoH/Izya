@@ -19,6 +19,10 @@
         <item quantity="many">Результатов поиска: %d</item>
         <item quantity="other">Результатов поиска: %d</item>
     </plurals>
+    <string name="find_torrent">Найти Torrent…</string>
+    <string name="dialog_add_torrent_link_title">Введите magnet или HTTP/HTTPS ссылку</string>
+    <string name="error_empty_torrent_link">Пожалуйста, введите ссылку</string>
+    <string name="error_invalid_torrent_link">Неверная ссылка</string>
     <string name="play">Воспроизвести</string>
     <string name="play_from_start">Воспроизвести с начала</string>
     <string name="play_as_audio">Воспроизвести как аудио</string>

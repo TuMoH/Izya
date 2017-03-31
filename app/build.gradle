@@ -25,13 +25,12 @@ android {
     dataBinding {
         enabled true
     }
-
     splits {
         abi {
             enable true
             universalApk false
             reset()
-            include 'mips', 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            include 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
         }
     }
 }
@@ -39,6 +38,7 @@ android {
 dependencies {
     compile project(':vlc')
     compile project(':api')
+    compile project(':torrent')
 
     compile "com.android.support:appcompat-v7:$supportLibrary"
     compile "com.android.support:recyclerview-v7:$supportLibrary"
@@ -46,7 +46,6 @@ dependencies {
     compile "com.android.support:design:$supportLibrary"
     compile "com.android.support:preference-v7:$supportLibrary"
     compile "com.android.support:percent:$supportLibrary"
-    compile "com.android.support:preference-leanback-v17:$supportLibrary"
 
     compile 'com.android.support.constraint:constraint-layout:1.0.2'
 
@@ -62,4 +61,10 @@ dependencies {
     compile "com.squareup.retrofit2:adapter-rxjava:$retrofit"
 
     compile 'com.github.TuMoH:suber:1.2.2'
+
+    compile "com.frostwire:jlibtorrent:$jlibtorrent"
+    compile "com.frostwire:jlibtorrent-android-arm:$jlibtorrent"
+    compile "com.frostwire:jlibtorrent-android-arm64:$jlibtorrent"
+    compile "com.frostwire:jlibtorrent-android-x86:$jlibtorrent"
+    compile "com.frostwire:jlibtorrent-android-x86_64:$jlibtorrent"
 }

@@ -1,1 +1,1 @@
-include ':app', ':vlc', 'api'
+include ':app', ':vlc', ':torrent', 'api'

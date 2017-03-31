@@ -25,6 +25,7 @@
         android:logo="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:fullBackupContent="true"
         android:theme="@style/Theme.VLC.NoTitleBar">
 
         <!-- Enable VLC in Samsung multiwindow mode -->
