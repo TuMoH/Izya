@@ -62,6 +62,10 @@ dependencies {
 
     compile 'com.github.TuMoH:suber:1.2.2'
 
+    compile ('com.github.ozodrukh:CircularReveal:2.0.1@aar') {
+        transitive = true;
+    }
+
     compile "com.frostwire:jlibtorrent:$jlibtorrent"
     compile "com.frostwire:jlibtorrent-android-arm:$jlibtorrent"
     compile "com.frostwire:jlibtorrent-android-arm64:$jlibtorrent"

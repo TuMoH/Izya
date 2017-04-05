@@ -30,7 +30,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import org.apache.commons.io.FilenameUtils;
+import org.proninyaroslav.libretorrent.utils.FileUtils;
 import org.proninyaroslav.libretorrent.R;
 import org.proninyaroslav.libretorrent.dialogs.filemanager.FileManagerNode;
 import org.proninyaroslav.libretorrent.core.filetree.FileNode;
@@ -78,7 +78,7 @@ public class FileManagerAdapter extends BaseFileListAdapter<FileManagerAdapter.V
 
         holder.file = file;
 
-        if (highlightFileTypes != null && highlightFileTypes.contains(FilenameUtils.getExtension(file.getName()))) {
+        if (highlightFileTypes != null && highlightFileTypes.contains(FileUtils.getExtension(file.getName()))) {
             holder.fileName.setTextColor(ContextCompat.getColor(context, R.color.file_manager_highlight));
         } else {
             TypedArray a = context.obtainStyledAttributes(new TypedValue().data, new int[]{ android.R.attr.textColorPrimary });

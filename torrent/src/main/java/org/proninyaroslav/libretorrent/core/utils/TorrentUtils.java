@@ -24,7 +24,7 @@ import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.Log;
 
-import org.apache.commons.io.FileUtils;
+import org.proninyaroslav.libretorrent.utils.FileUtils;
 import org.proninyaroslav.libretorrent.R;
 import org.proninyaroslav.libretorrent.core.storage.TorrentStorage;
 import org.proninyaroslav.libretorrent.settings.SettingsManager;
@@ -177,8 +177,7 @@ public class TorrentUtils
         }
 
         FileUtils.writeByteArrayToFile(
-                new File(pathToDataDir, TorrentStorage.Model.DATA_TORRENT_RESUME_FILE_NAME),
-                data);
+                new File(pathToDataDir, TorrentStorage.Model.DATA_TORRENT_RESUME_FILE_NAME), data);
     }
 
     /*

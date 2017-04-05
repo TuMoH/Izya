@@ -11,6 +11,7 @@
     <style name="Theme.VLC.Apearance" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="marginTopContent">50dp</item>
         <item name="toolbar_popup_style">@style/ThemeOverlay.AppCompat.Light</item>
+        <item name="defaultRectRipple">@drawable/default_rect_ripple</item>
 
         <item name="android:gridViewStyle">@style/Theme.VLC.List</item>
         <item name="android:expandableListViewStyle">@style/Theme.VLC.List</item>
@@ -100,6 +101,7 @@
     <style name="Theme.VLC.Apearance.Black" parent="Theme.AppCompat.NoActionBar">
         <item name="marginTopContent">50dp</item>
         <item name="toolbar_popup_style">@style/ThemeOverlay.AppCompat.Dark</item>
+        <item name="defaultRectRipple">@drawable/default_rect_ripple_dark</item>
 
         <item name="android:gridViewStyle">@style/Theme.VLC.List</item>
         <item name="android:expandableListViewStyle">@style/Theme.VLC.List</item>
@@ -250,4 +252,14 @@
     <style name="TipsFontStyle.Small" parent="TipsFontStyle">
       <item name="android:textSize">10sp</item>
     </style>
+
+    <style name="AddTorrentTextLayout" parent="TextAppearance.AppCompat">
+        <!-- Hint color and label color in FALSE state -->
+        <item name="android:textColorHint">#fff</item>
+        <!-- Label color in TRUE state and bar color FALSE and TRUE State -->
+        <!--<item name="colorAccent">#fff</item>-->
+        <item name="colorControlNormal">#fff</item>
+        <item name="colorControlActivated">#fff</item>
+    </style>
+
 </resources>

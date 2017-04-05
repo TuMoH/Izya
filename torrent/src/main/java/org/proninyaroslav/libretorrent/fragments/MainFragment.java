@@ -67,7 +67,6 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 
-import org.proninyaroslav.libretorrent.AddTorrentActivity;
 import org.proninyaroslav.libretorrent.DetailTorrentActivity;
 import org.proninyaroslav.libretorrent.R;
 import org.proninyaroslav.libretorrent.adapters.TorrentListAdapter;
@@ -241,10 +240,10 @@ public class MainFragment extends Fragment
 
         Intent i = activity.getIntent();
         /* If add torrent dialog has been called by an implicit intent */
-        if (i != null && i.hasExtra(AddTorrentActivity.TAG_RESULT_TORRENT)) {
+        if (i != null && i.hasExtra("TAG_RESULT_TORRENT")) {
             if (prevImplIntent == null || !prevImplIntent.equals(i)) {
                 prevImplIntent = i;
-                Torrent torrent = i.getParcelableExtra(AddTorrentActivity.TAG_RESULT_TORRENT);
+                Torrent torrent = i.getParcelableExtra("TAG_RESULT_TORRENT");
 
                 if (torrent != null) {
                     ArrayList<Torrent> list = new ArrayList<>();
@@ -807,13 +806,13 @@ public class MainFragment extends Fragment
     }
 
     private void addTorrentDialog(Uri uri) {
-        if (uri == null) {
-            return;
-        }
-
-        Intent i = new Intent(activity, AddTorrentActivity.class);
-        i.putExtra(AddTorrentActivity.TAG_URI, uri);
-        startActivityForResult(i, ADD_TORRENT_REQUEST);
+//        if (uri == null) {
+//            return;
+//        }
+//
+//        Intent i = new Intent(activity, AddTorrentActivity.class);
+//        i.putExtra(AddTorrentActivity.TAG_URI, uri);
+//        startActivityForResult(i, ADD_TORRENT_REQUEST);
     }
 
     private void showDetailTorrent(String id) {
@@ -1025,16 +1024,16 @@ public class MainFragment extends Fragment
                 }
                 break;
             case ADD_TORRENT_REQUEST:
-                if (resultCode == Activity.RESULT_OK) {
-                    if (data.hasExtra(AddTorrentActivity.TAG_RESULT_TORRENT)) {
-                        Torrent torrent = data.getParcelableExtra(AddTorrentActivity.TAG_RESULT_TORRENT);
-                        if (torrent != null) {
-                            ArrayList<Torrent> list = new ArrayList<>();
-                            list.add(torrent);
-                            addTorrentsRequest(list);
-                        }
-                    }
-                }
+//                if (resultCode == Activity.RESULT_OK) {
+//                    if (data.hasExtra(AddTorrentActivity.TAG_RESULT_TORRENT)) {
+//                        Torrent torrent = data.getParcelableExtra(AddTorrentActivity.TAG_RESULT_TORRENT);
+//                        if (torrent != null) {
+//                            ArrayList<Torrent> list = new ArrayList<>();
+//                            list.add(torrent);
+//                            addTorrentsRequest(list);
+//                        }
+//                    }
+//                }
                 break;
         }
     }

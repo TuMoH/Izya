@@ -29,8 +29,8 @@ public interface FileNode<F> extends Comparable<F>
 {
     class Type implements Serializable
     {
-        public static int DIR = 0;
-        public static int FILE = 1;
+        public static final int DIR = 0;
+        public static final int FILE = 1;
     }
 
     String getName();

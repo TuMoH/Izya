@@ -440,6 +440,10 @@ public class MainActivity extends AudioPlayerContainerActivity implements Filter
         } else if (fragment instanceof ExtensionBrowser) {
             ((ExtensionBrowser) fragment).goBack();
             return;
+        } else if (fragment instanceof VideoGridFragment) {
+            if (((VideoGridFragment) fragment).goBack()) {
+                return;
+            }
         }
         finish();
     }

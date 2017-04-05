@@ -27,7 +27,7 @@ import android.support.v4.util.ArrayMap;
 import android.text.TextUtils;
 import android.util.Log;
 
-import org.apache.commons.io.FileUtils;
+import org.proninyaroslav.libretorrent.utils.FileUtils;
 import org.proninyaroslav.libretorrent.core.Torrent;
 import org.proninyaroslav.libretorrent.core.utils.TorrentUtils;
 

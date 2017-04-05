@@ -17,7 +17,7 @@
  * along with LibreTorrent.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.proninyaroslav.libretorrent.adapters;
+package org.videolan.vlc.gui.torrent;
 
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
@@ -30,6 +30,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import org.proninyaroslav.libretorrent.R;
+import org.proninyaroslav.libretorrent.adapters.BaseFileListAdapter;
 import org.proninyaroslav.libretorrent.core.filetree.BencodeFileTree;
 import org.proninyaroslav.libretorrent.core.filetree.FileNode;
 
@@ -39,17 +40,14 @@ import java.util.List;
 /*
  * The adapter for representation of downloadable files in a file tree view.
  */
-
 public class DownloadableFilesAdapter
-        extends BaseFileListAdapter<DownloadableFilesAdapter.ViewHolder, BencodeFileTree>
-{
+        extends BaseFileListAdapter<DownloadableFilesAdapter.ViewHolder, BencodeFileTree> {
     private Context context;
     private ViewHolder.ClickListener clickListener;
     private int rowLayout;
 
     public DownloadableFilesAdapter(List<BencodeFileTree> files, Context context,
-                                    int rowLayout, ViewHolder.ClickListener clickListener)
-    {
+                                    int rowLayout, ViewHolder.ClickListener clickListener) {
         this.context = context;
         this.rowLayout = rowLayout;
         this.clickListener = clickListener;
@@ -58,16 +56,14 @@ public class DownloadableFilesAdapter
     }
 
     @Override
-    public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType)
-    {
+    public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext()).inflate(rowLayout, parent, false);
 
         return new ViewHolder(v, clickListener, files);
     }
 
     @Override
-    public void onBindViewHolder(final ViewHolder holder, final int position)
-    {
+    public void onBindViewHolder(final ViewHolder holder, final int position) {
         final BencodeFileTree file = files.get(position);
 
         holder.fileName.setText(file.getName());
@@ -90,8 +86,7 @@ public class DownloadableFilesAdapter
         }
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener
-    {
+    public static class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
         private ClickListener listener;
         private List<BencodeFileTree> files;
         TextView fileName;
@@ -99,8 +94,7 @@ public class DownloadableFilesAdapter
         ImageView fileIcon;
         CheckBox fileSelected;
 
-        public ViewHolder(View itemView, final ClickListener listener, final List<BencodeFileTree> files)
-        {
+        public ViewHolder(View itemView, final ClickListener listener, final List<BencodeFileTree> files) {
             super(itemView);
 
             this.listener = listener;
@@ -111,22 +105,16 @@ public class DownloadableFilesAdapter
             fileSize = (TextView) itemView.findViewById(R.id.file_size);
             fileIcon = (ImageView) itemView.findViewById(R.id.file_icon);
             fileSelected = (CheckBox) itemView.findViewById(R.id.file_selected);
-            fileSelected.setOnClickListener(new View.OnClickListener()
-            {
-                @Override
-                public void onClick(View v)
-                {
-                    if (listener != null) {
-                        listener.onItemCheckedChanged(ViewHolder.this.files.get(getAdapterPosition()),
-                                                      fileSelected.isChecked());
-                    }
+            fileSelected.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onItemCheckedChanged(ViewHolder.this.files.get(getAdapterPosition()),
+                            fileSelected.isChecked());
                 }
             });
         }
 
         @Override
-        public void onClick(View v)
-        {
+        public void onClick(View v) {
             int position = getAdapterPosition();
 
             if (listener != null && position >= 0) {
@@ -141,8 +129,7 @@ public class DownloadableFilesAdapter
             }
         }
 
-        public interface ClickListener
-        {
+        public interface ClickListener {
             void onItemClicked(BencodeFileTree node);
 
             void onItemCheckedChanged(BencodeFileTree node, boolean selected);

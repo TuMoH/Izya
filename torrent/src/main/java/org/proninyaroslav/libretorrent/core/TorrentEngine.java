@@ -43,7 +43,7 @@ import com.frostwire.jlibtorrent.swig.libtorrent;
 import com.frostwire.jlibtorrent.swig.session_params;
 import com.frostwire.jlibtorrent.swig.settings_pack;
 
-import org.apache.commons.io.FileUtils;
+import org.proninyaroslav.libretorrent.utils.FileUtils;
 import org.proninyaroslav.libretorrent.core.storage.TorrentStorage;
 import org.proninyaroslav.libretorrent.core.utils.TorrentUtils;
 

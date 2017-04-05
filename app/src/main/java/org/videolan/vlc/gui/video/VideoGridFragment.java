@@ -20,6 +20,10 @@
 
 package org.videolan.vlc.gui.video;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -27,18 +31,19 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Configuration;
 import android.content.res.Resources;
+import android.graphics.Rect;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.TextInputEditText;
 import android.support.design.widget.TextInputLayout;
-import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.util.ArrayMap;
-import android.support.v7.app.AlertDialog;
+import android.support.v4.view.animation.FastOutSlowInInterpolator;
+import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -53,13 +58,13 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.view.animation.AccelerateInterpolator;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.timursoft.izya.R;
 
-import org.proninyaroslav.libretorrent.AddTorrentActivity;
 import org.proninyaroslav.libretorrent.core.utils.Utils;
 import org.videolan.libvlc.Media;
 import org.videolan.libvlc.util.AndroidUtil;
@@ -68,7 +73,7 @@ import org.videolan.vlc.gui.MainActivity;
 import org.videolan.vlc.gui.SecondaryActivity;
 import org.videolan.vlc.gui.browser.MediaBrowserFragment;
 import org.videolan.vlc.gui.helpers.UiTools;
-import org.videolan.vlc.gui.torrent.BaseDialog;
+import org.videolan.vlc.gui.torrent.AddTorrentActivity;
 import org.videolan.vlc.gui.view.AutoFitRecyclerView;
 import org.videolan.vlc.gui.view.ContextMenuRecyclerView;
 import org.videolan.vlc.gui.view.SwipeRefreshLayout;
@@ -86,8 +91,10 @@ import org.videolan.vlc.util.VLCInstance;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.codetail.animation.ViewAnimationUtils;
+
 public class VideoGridFragment extends MediaBrowserFragment
-        implements ISortable, IVideoBrowser, SwipeRefreshLayout.OnRefreshListener, BaseDialog.OnDialogShowListener {
+        implements ISortable, IVideoBrowser, SwipeRefreshLayout.OnRefreshListener {
 
     public final static String TAG = "VLC/VideoListFragment";
 
@@ -99,7 +106,13 @@ public class VideoGridFragment extends MediaBrowserFragment
     protected TextView mTextViewNomedia;
     protected View mViewNomedia;
     protected String mGroup;
+
     protected FloatingActionButton addTorrentButton;
+    protected TextView addTorrentText;
+    protected TextInputLayout addTorrentTextLayout;
+    protected ImageView addTorrentOk;
+    protected ImageView addTorrentCancel;
+    protected CardView addTorrentCard;
 
     private VideoListAdapter mVideoAdapter;
     private Thumbnailer mThumbnailer;
@@ -127,15 +140,14 @@ public class VideoGridFragment extends MediaBrowserFragment
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-
-        View v = inflater.inflate(R.layout.video_grid, container, false);
+        View view = inflater.inflate(R.layout.video_grid, container, false);
 
         // init the information for the scan (1/2)
-        mLayoutFlipperLoading = (LinearLayout) v.findViewById(R.id.layout_flipper_loading);
-        mTextViewNomedia = (TextView) v.findViewById(R.id.textview_nomedia);
-        mViewNomedia = v.findViewById(android.R.id.empty);
-        mGridView = (AutoFitRecyclerView) v.findViewById(android.R.id.list);
-        mSwipeRefreshLayout = (SwipeRefreshLayout) v.findViewById(R.id.swipeLayout);
+        mLayoutFlipperLoading = (LinearLayout) view.findViewById(R.id.layout_flipper_loading);
+        mTextViewNomedia = (TextView) view.findViewById(R.id.textview_nomedia);
+        mViewNomedia = view.findViewById(android.R.id.empty);
+        mGridView = (AutoFitRecyclerView) view.findViewById(android.R.id.list);
+        mSwipeRefreshLayout = (SwipeRefreshLayout) view.findViewById(R.id.swipeLayout);
 
         mSwipeRefreshLayout.setColorSchemeResources(R.color.orange700);
         mSwipeRefreshLayout.setOnRefreshListener(this);
@@ -143,10 +155,51 @@ public class VideoGridFragment extends MediaBrowserFragment
         mGridView.addOnScrollListener(mScrollListener);
         mGridView.setAdapter(mVideoAdapter);
 
-        addTorrentButton = (FloatingActionButton) v.findViewById(R.id.add_torrent_button);
-        addTorrentButton.setOnClickListener(view -> addTorrentLinkDialog());
+        addTorrentButton = (FloatingActionButton) view.findViewById(R.id.add_torrent_button);
+        addTorrentButton.setOnClickListener(v -> openAddTorrentLayout());
 
-        return v;
+        addTorrentCard = (CardView) view.findViewById(R.id.add_torrent_card);
+        addTorrentCard.setOnClickListener(v -> closeAddTorrentLayout());
+
+        addTorrentOk = (ImageView) view.findViewById(R.id.add_torrent_ok);
+        addTorrentOk.setOnClickListener(v -> {
+            String link = addTorrentText.getText().toString();
+            if (checkTorrentLinkEditTextField(link)) {
+                String url;
+                if (link.startsWith(Utils.MAGNET_PREFIX)) {
+                    url = link;
+                } else {
+                    url = Utils.normalizeURL(link);
+                }
+                if (url != null) {
+                    openAddTorrentActivity(Uri.parse(url));
+                }
+                closeAddTorrentLayout();
+            }
+        });
+
+        addTorrentCancel = (ImageView) view.findViewById(R.id.add_torrent_cancel);
+        addTorrentCancel.setOnClickListener(v -> closeAddTorrentLayout());
+
+        addTorrentTextLayout = (TextInputLayout) view.findViewById(R.id.add_torrent_text_layout);
+        addTorrentText = (TextView) view.findViewById(R.id.add_torrent_text);
+        addTorrentText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                addTorrentTextLayout.setErrorEnabled(false);
+                addTorrentTextLayout.setError(null);
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+
+        return view;
     }
 
     RecyclerView.OnScrollListener mScrollListener = new RecyclerView.OnScrollListener() {
@@ -571,144 +624,132 @@ public class VideoGridFragment extends MediaBrowserFragment
         }
     }
 
-    private void addTorrentLinkDialog() {
-        if (getFragmentManager().findFragmentByTag(TAG_ADD_TORRENT_LINK_DIALOG) == null) {
-            DialogFragment dialog = BaseDialog.newInstance(
-                    getString(R.string.dialog_add_torrent_link_title),
-                    null,
-                    R.layout.dialog_text_input,
-                    getString(R.string.ok),
-                    getString(R.string.cancel),
-                    null,
-                    this);
-
-            dialog.show(getFragmentManager(), TAG_ADD_TORRENT_LINK_DIALOG);
+    private void openAddTorrentLayout() {
+        // Cancel all concurrent events on view
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            addTorrentButton.cancelPendingInputEvents();
         }
-    }
+        addTorrentButton.setEnabled(false);
 
-    @Override
-    public void onShow(AlertDialog dialog) {
-        if (dialog != null) {
-            if (getFragmentManager().findFragmentByTag(TAG_ADD_TORRENT_LINK_DIALOG) != null) {
-                initAddTorrentLinkDialog(dialog);
-            }
-        }
-    }
+        final ViewGroup parent = (ViewGroup) addTorrentCard.getParent();
+        final Rect bounds = new Rect();
+        final Rect maskBounds = new Rect();
 
-    private void initAddTorrentLinkDialog(final AlertDialog dialog) {
-        final TextInputEditText field = (TextInputEditText) dialog.findViewById(R.id.text_input_dialog);
-        final TextInputLayout fieldLayout = (TextInputLayout) dialog.findViewById(R.id.layout_text_input_dialog);
+        addTorrentButton.getDrawingRect(bounds);
+        addTorrentCard.getDrawingRect(maskBounds);
+        parent.offsetDescendantRectToMyCoords(addTorrentButton, bounds);
+        parent.offsetDescendantRectToMyCoords(addTorrentCard, maskBounds);
 
-        field.setText("magnet:?xt=urn:btih:3307944256656f60d4847df2d90e6aef663db7d4&dn=rutor.info_Том+Шродер+-+Старые+души+%281999%29+PDF&tr=udp://opentor.org:2710&tr=udp://opentor.org:2710&tr=http://retracker.local/announce");
+        addTorrentCard.setVisibility(View.VISIBLE);
+        this.addTorrentButton.setVisibility(View.INVISIBLE);
 
-        /* Dismiss error label if user has changed the text */
-        if (field != null && fieldLayout != null) {
-            field.addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                    /* Nothing */
-                }
+        final float endRadius = (float) Math.hypot(maskBounds.width(), maskBounds.height());
 
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    fieldLayout.setErrorEnabled(false);
-                    fieldLayout.setError(null);
-                }
+        Animator circularReveal =
+                ViewAnimationUtils.createCircularReveal(addTorrentCard, bounds.centerX(),
+                        addTorrentCard.getHeight() / 2, addTorrentButton.getWidth(),
+                        endRadius, View.LAYER_TYPE_HARDWARE);
 
-                @Override
-                public void afterTextChanged(Editable s) {
-                    /* Nothing */
-                }
-            });
-        }
-
-        /*
-         * It is necessary in order to the dialog is not closed by
-         * pressing positive button if the text checker gave a false result
-         */
-        Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-
-        positiveButton.setOnClickListener(v -> {
-            if (field != null && fieldLayout != null) {
-                String link = field.getText().toString();
-
-                if (checkTorrentLinkEditTextField(link, fieldLayout)) {
-                    String url;
-
-                    if (link.startsWith(Utils.MAGNET_PREFIX)) {
-                        url = link;
-                    } else {
-                        url = Utils.normalizeURL(link);
-                    }
-
-                    if (url != null) {
-                        addTorrentDialog(Uri.parse(url));
-                    }
-
-                    dialog.dismiss();
-                }
+        circularReveal.setInterpolator(new FastOutSlowInInterpolator());
+        circularReveal.setDuration(200);
+        circularReveal.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                checkLinkFromClipboard();
             }
         });
+        circularReveal.start();
+    }
+
+    void closeAddTorrentLayout() {
+        final ViewGroup parent = (ViewGroup) addTorrentCard.getParent();
+        final Rect bounds = new Rect();
+        final Rect maskBounds = new Rect();
+
+        addTorrentButton.getDrawingRect(bounds);
+        addTorrentCard.getDrawingRect(maskBounds);
+        parent.offsetDescendantRectToMyCoords(addTorrentButton, bounds);
+        parent.offsetDescendantRectToMyCoords(addTorrentCard, maskBounds);
+
+        final Animator circularReveal =
+                ViewAnimationUtils.createCircularReveal(addTorrentCard, bounds.centerX(),
+                addTorrentCard.getHeight() / 2,
+                (float) Math.hypot(maskBounds.width(), maskBounds.height()),
+                addTorrentButton.getWidth(), View.LAYER_TYPE_HARDWARE);
+
+        circularReveal.setInterpolator(new AccelerateInterpolator());
+        circularReveal.setDuration(150);
+        circularReveal.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                addTorrentCard.setVisibility(View.INVISIBLE);
+                addTorrentButton.setVisibility(View.VISIBLE);
+                addTorrentButton.setEnabled(true);
+            }
+        });
+        circularReveal.start();
+    }
+
+    private void checkLinkFromClipboard() {
+        // TODO: 05.04.17 debug only
+        addTorrentText.setText("magnet:?xt=urn:btih:3307944256656f60d4847df2d90e6aef663db7d4&dn=rutor.info_Том+Шродер+-+Старые+души+%281999%29+PDF&tr=udp://opentor.org:2710&tr=udp://opentor.org:2710&tr=http://retracker.local/announce");
 
         /* Inserting a link from the clipboard */
         String clipboard = Utils.getClipboard(getActivity().getApplicationContext());
-        String url;
-
         if (clipboard != null) {
+            String url;
             if (!clipboard.startsWith(Utils.MAGNET_PREFIX)) {
                 url = Utils.normalizeURL(clipboard);
             } else {
                 url = clipboard;
             }
-
-            if (field != null && url != null) {
-                field.setText(url);
+            if (url != null) {
+                addTorrentText.setText(url);
             }
         }
     }
 
-    private boolean checkTorrentLinkEditTextField(String s, TextInputLayout layout) {
-        if (s == null || layout == null) {
+    private boolean checkTorrentLinkEditTextField(String link) {
+        if (link == null) {
             return false;
         }
-
-        if (TextUtils.isEmpty(s)) {
-            layout.setErrorEnabled(true);
-            layout.setError(getString(R.string.error_empty_torrent_link));
-            layout.requestFocus();
-
+        if (TextUtils.isEmpty(link)) {
+            addTorrentTextLayout.setErrorEnabled(true);
+            addTorrentTextLayout.setError(getString(R.string.error_empty_torrent_link));
+            addTorrentTextLayout.requestFocus();
             return false;
         }
-
-        if (s.startsWith(Utils.MAGNET_PREFIX)) {
-            layout.setErrorEnabled(false);
-            layout.setError(null);
-
+        if (link.startsWith(Utils.MAGNET_PREFIX)) {
+            addTorrentTextLayout.setErrorEnabled(false);
+            addTorrentTextLayout.setError(null);
             return true;
         }
-
-        if (!Patterns.WEB_URL.matcher(s).matches()) {
-            layout.setErrorEnabled(true);
-            layout.setError(getString(R.string.error_invalid_torrent_link));
-            layout.requestFocus();
-
+        if (!Patterns.WEB_URL.matcher(link).matches()) {
+            addTorrentTextLayout.setErrorEnabled(true);
+            addTorrentTextLayout.setError(getString(R.string.error_invalid_torrent_link));
+            addTorrentTextLayout.requestFocus();
             return false;
         }
-
-        layout.setErrorEnabled(false);
-        layout.setError(null);
-
+        addTorrentTextLayout.setErrorEnabled(false);
+        addTorrentTextLayout.setError(null);
         return true;
     }
 
-    private void addTorrentDialog(Uri uri) {
+    private void openAddTorrentActivity(Uri uri) {
         if (uri == null) {
             return;
         }
+        Intent intent = new Intent(getContext(), AddTorrentActivity.class);
+        intent.putExtra(AddTorrentActivity.TAG_URI, uri);
+        startActivity(intent);
+    }
 
-        Intent i = new Intent(getContext(), AddTorrentActivity.class);
-        i.putExtra(AddTorrentActivity.TAG_URI, uri);
-        startActivityForResult(i, 1);
+    public boolean goBack() {
+        if (addTorrentCard.getVisibility() == View.VISIBLE) {
+            closeAddTorrentLayout();
+            return true;
+        }
+        return false;
     }
 
 }

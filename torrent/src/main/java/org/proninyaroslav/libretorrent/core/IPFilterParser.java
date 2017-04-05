@@ -27,13 +27,12 @@ import com.frostwire.jlibtorrent.swig.address;
 import com.frostwire.jlibtorrent.swig.error_code;
 import com.frostwire.jlibtorrent.swig.ip_filter;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.LineIterator;
+import org.proninyaroslav.libretorrent.utils.FileUtils;
+import org.proninyaroslav.libretorrent.utils.LineIterator;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.List;
 
 /*
  * Parser of blacklist IP addresses in DAT and P2P formats.

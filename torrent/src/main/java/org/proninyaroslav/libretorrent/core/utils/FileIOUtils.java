@@ -26,13 +26,12 @@ import android.os.StatFs;
 import android.text.TextUtils;
 import android.util.Log;
 
-import org.apache.commons.io.FileUtils;
+import org.proninyaroslav.libretorrent.utils.FileUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Map;
 
 /*
  * Main I/O operations on files.
