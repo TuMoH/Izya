@@ -27,10 +27,12 @@ import android.app.Presentation;
 import android.bluetooth.BluetoothA2dp;
 import android.bluetooth.BluetoothHeadset;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.pm.ActivityInfo;
@@ -45,13 +47,15 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
+import android.os.Messenger;
+import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.content.LocalBroadcastManager;
@@ -76,7 +80,6 @@ import android.view.Display;
 import android.view.GestureDetector;
 import android.view.InputDevice;
 import android.view.KeyEvent;
-import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceView;
@@ -106,8 +109,11 @@ import com.timursoft.izya.SubsViewModel;
 import com.timursoft.izya.databinding.SubsBinding;
 import com.timursoft.suber.Sub;
 
+import org.proninyaroslav.libretorrent.core.Torrent;
+import org.proninyaroslav.libretorrent.core.TorrentTaskServiceIPC;
+import org.proninyaroslav.libretorrent.core.stateparcel.TorrentStateParcel;
+import org.proninyaroslav.libretorrent.TorrentTaskService;
 import org.videolan.libvlc.IVLCVout;
-import org.videolan.libvlc.LibVLC;
 import org.videolan.libvlc.Media;
 import org.videolan.libvlc.MediaPlayer;
 import org.videolan.libvlc.util.AndroidUtil;
@@ -130,7 +136,6 @@ import org.videolan.vlc.util.AndroidDevices;
 import org.videolan.vlc.util.FileUtils;
 import org.videolan.vlc.util.Permissions;
 import org.videolan.vlc.util.Strings;
-import org.videolan.vlc.util.SubtitlesDownloader;
 import org.videolan.vlc.util.Util;
 import org.videolan.vlc.util.VLCInstance;
 
@@ -142,11 +147,12 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.text.BreakIterator;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import rx.Observable;
 import rx.Subscription;
@@ -166,6 +172,7 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
     // external intent.
     public final static String PLAY_FROM_VIDEOGRID = Strings.buildPkgString("gui.video.PLAY_FROM_VIDEOGRID");
     public final static String PLAY_FROM_SERVICE = Strings.buildPkgString("gui.video.PLAY_FROM_SERVICE");
+    public final static String PLAY_FROM_TORRENT = Strings.buildPkgString("gui.video.PLAY_FROM_TORRENT");
     public final static String EXIT_PLAYER = Strings.buildPkgString("gui.video.EXIT_PLAYER");
 
     public final static String PLAY_EXTRA_ITEM_LOCATION = "item_location";
@@ -174,6 +181,7 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
     public final static String PLAY_EXTRA_FROM_START = "from_start";
     public final static String PLAY_EXTRA_START_TIME = "position";
     public final static String PLAY_EXTRA_OPENED_POSITION = "opened_position";
+    public final static String PLAY_EXTRA_TORRENT = "torrent";
     public final static String PLAY_DISABLE_HARDWARE = "disable_hardware";
 
     public final static String ACTION_RESULT = Strings.buildPkgString("player.result");
@@ -364,10 +372,14 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
     private Subscription subRemover = null;
     private int lastPlayedPosition = 0;
 
-    private static LibVLC LibVLC() {
-        return VLCInstance.get();
-    }
+    /* Messenger for communicating with the torrent service. */
+    private Messenger torrentServiceCallback = null;
+    private Messenger torrentClientCallback = new Messenger(new TorrentCallbackHandler());
+    private TorrentTaskServiceIPC torrentIpc = new TorrentTaskServiceIPC();
+    private TorrentServiceConnection torrentConnection = new TorrentServiceConnection();
+    private HashSet<Torrent> torrentsQueue = new HashSet<>();
 
+    @SuppressWarnings({"ResourceType", "deprecation"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -800,6 +812,16 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
         }
 
         mAudioManager = null;
+
+        if (torrentConnection.bound) {
+            try {
+                torrentIpc.sendClientDisconnect(torrentServiceCallback, torrentClientCallback);
+            } catch (RemoteException e) {
+                Log.e(TAG, Log.getStackTraceString(e));
+            }
+            unbindService(torrentConnection);
+            torrentConnection.bound = false;
+        }
     }
 
     /**
@@ -882,22 +904,14 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
         cleanUI();
 
         /* Dispatch ActionBar touch events to the Activity */
-        mActionBarView.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                onTouchEvent(event);
-                return true;
-            }
+        mActionBarView.setOnTouchListener((v, event) -> {
+            onTouchEvent(event);
+            return true;
         });
 
         if (mOnLayoutChangeListener == null) {
             mOnLayoutChangeListener = new OnLayoutChangeListener() {
-                private final Runnable mRunnable = new Runnable() {
-                    @Override
-                    public void run() {
-                        changeSurfaceLayout();
-                    }
-                };
+                private final Runnable mRunnable = () -> changeSurfaceLayout();
 
                 @Override
                 public void onLayoutChange(View v, int left, int top, int right,
@@ -1027,13 +1041,19 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
             Log.d(TAG, "Subtitle selection dialog was cancelled");
         else {
             mService.addSubtitleTrack(data.getData(), true);
-            VLCApplication.runBackground(new Runnable() {
-                @Override
-                public void run() {
-                    MediaDatabase.getInstance().saveSlave(mService.getCurrentMediaLocation(), Media.Slave.Type.Subtitle, 2, data.getDataString());
-                }
-            });
+            VLCApplication.runBackground(() -> MediaDatabase.getInstance().saveSlave(
+                    mService.getCurrentMediaLocation(), Media.Slave.Type.Subtitle, 2, data.getDataString()));
         }
+    }
+
+    public static void start(Context context, Torrent torrent) {
+//        addTorrentsRequest(Collections.singleton(torrent));
+        Intent intent = new Intent(context, VideoPlayerActivity.class);
+        intent.setAction(PLAY_FROM_TORRENT);
+        intent.putExtra(PLAY_EXTRA_TORRENT, torrent);
+        intent.putExtra(PLAY_EXTRA_FROM_START, true);
+
+        context.startActivity(intent);
     }
 
     public static void start(Context context, Uri uri) {
@@ -1452,6 +1472,7 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
     /**
      * Lock screen rotation
      */
+    @SuppressWarnings("ResourceType")
     private void lockScreen() {
         if (mScreenOrientation != 100) {
             mScreenOrientationLock = getRequestedOrientation();
@@ -1727,12 +1748,7 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
             mHandler.removeMessages(LOADING_ANIMATION);
             mHandler.sendEmptyMessageDelayed(LOADING_ANIMATION, LOADING_ANIMATION_DELAY);
             Log.d(TAG, "Found a video playlist, expanding it");
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    loadMedia();
-                }
-            });
+            mHandler.post(this::loadMedia);
         }
     }
 
@@ -1748,18 +1764,8 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
         }
         /* Encountered Error, exit player with a message */
         mAlertDialog = new AlertDialog.Builder(VideoPlayerActivity.this)
-                .setOnCancelListener(new DialogInterface.OnCancelListener() {
-                    @Override
-                    public void onCancel(DialogInterface dialog) {
-                        exit(RESULT_PLAYBACK_ERROR);
-                    }
-                })
-                .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int id) {
-                        exit(RESULT_PLAYBACK_ERROR);
-                    }
-                })
+                .setOnCancelListener(dialog -> exit(RESULT_PLAYBACK_ERROR))
+                .setPositiveButton(R.string.ok, (dialog, id) -> exit(RESULT_PLAYBACK_ERROR))
                 .setTitle(R.string.encountered_error_title)
                 .setMessage(R.string.encountered_error_message)
                 .create();
@@ -2229,37 +2235,31 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
         popupMenu.getMenu().findItem(R.id.video_menu_subtitles).setEnabled(mService.getSpuTracksCount() > 0);
         //FIXME network subs cannot be enabled & screen cast display is broken with picker
         popupMenu.getMenu().findItem(R.id.video_menu_subtitles_picker).setEnabled(!TextUtils.equals(mUri.getScheme(), "http") && mPresentation == null);
-        popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                if (item.getItemId() == R.id.video_menu_audio_track) {
-                    selectAudioTrack();
-                    return true;
-                } else if (item.getItemId() == R.id.video_menu_subtitles) {
-                    selectSubtitles();
-                    return true;
-                } else if (item.getItemId() == R.id.video_menu_subtitles_picker) {
-                    if (mUri == null)
-                        return false;
-                    Intent filePickerIntent = new Intent(context, FilePickerActivity.class);
-                    if (!TextUtils.equals(mUri.getScheme(), "http"))
-                        filePickerIntent.setData(Uri.parse(FileUtils.getParent(mUri.toString())));
-                    context.startActivityForResult(filePickerIntent, 0);
-                    return true;
-                } else if (item.getItemId() == R.id.video_menu_subtitles_download) {
-                    if (mUri == null)
-                        return false;
-                    MediaUtils.getSubs(VideoPlayerActivity.this, mService.getCurrentMediaWrapper(), new SubtitlesDownloader.Callback() {
-                        @Override
-                        public void onRequestEnded(boolean success) {
-                            if (success)
-                                getSubtitles();
-                        }
-                    });
-                }
-                hideOverlay(true);
-                return false;
+        popupMenu.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.video_menu_audio_track) {
+                selectAudioTrack();
+                return true;
+            } else if (item.getItemId() == R.id.video_menu_subtitles) {
+                selectSubtitles();
+                return true;
+            } else if (item.getItemId() == R.id.video_menu_subtitles_picker) {
+                if (mUri == null)
+                    return false;
+                Intent filePickerIntent = new Intent(context, FilePickerActivity.class);
+                if (!TextUtils.equals(mUri.getScheme(), "http"))
+                    filePickerIntent.setData(Uri.parse(FileUtils.getParent(mUri.toString())));
+                context.startActivityForResult(filePickerIntent, 0);
+                return true;
+            } else if (item.getItemId() == R.id.video_menu_subtitles_download) {
+                if (mUri == null)
+                    return false;
+                MediaUtils.getSubs(VideoPlayerActivity.this, mService.getCurrentMediaWrapper(), success -> {
+                    if (success)
+                        getSubtitles();
+                });
             }
+            hideOverlay(true);
+            return false;
         });
         popupMenu.show();
         showOverlay();
@@ -2270,18 +2270,15 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
         PopupMenu popupMenu = new PopupMenu(this, anchor);
         popupMenu.getMenuInflater().inflate(R.menu.audio_player, popupMenu.getMenu());
 
-        popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                if (item.getItemId() == R.id.audio_player_mini_remove) {
-                    if (mService != null) {
-                        mPlaylistAdapter.remove(position);
-                        mService.remove(position);
-                        return true;
-                    }
+        popupMenu.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.audio_player_mini_remove) {
+                if (mService != null) {
+                    mPlaylistAdapter.remove(position);
+                    mService.remove(position);
+                    return true;
                 }
-                return false;
             }
+            return false;
         });
         popupMenu.show();
     }
@@ -2302,12 +2299,9 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
             mPlaylistAdapter.notifyItemRangeChanged(0, count);
 
         final int selectionIndex = mService.getCurrentMediaPosition();
-        mPlaylist.post(new Runnable() {
-            @Override
-            public void run() {
-                mPlaylistAdapter.setCurrentIndex(selectionIndex);
-                mPlaylist.scrollToPosition(selectionIndex);
-            }
+        mPlaylist.post(() -> {
+            mPlaylistAdapter.setCurrentIndex(selectionIndex);
+            mPlaylist.scrollToPosition(selectionIndex);
         });
     }
 
@@ -2423,20 +2417,17 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
         if (!isFinishing()) {
             mAlertDialog = new AlertDialog.Builder(VideoPlayerActivity.this)
                     .setTitle(titleId)
-                    .setSingleChoiceItems(nameList, listPosition, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int listPosition) {
-                            int trackID = -1;
-                            // Reverse map search...
-                            for (MediaPlayer.TrackDescription track : tracks) {
-                                if (idList[listPosition] == track.id) {
-                                    trackID = track.id;
-                                    break;
-                                }
+                    .setSingleChoiceItems(nameList, listPosition, (dialog, listPosition1) -> {
+                        int trackID = -1;
+                        // Reverse map search...
+                        for (MediaPlayer.TrackDescription track : tracks) {
+                            if (idList[listPosition1] == track.id) {
+                                trackID = track.id;
+                                break;
                             }
-                            listener.onTrackSelected(trackID);
-                            dialog.dismiss();
                         }
+                        listener.onTrackSelected(trackID);
+                        dialog.dismiss();
                     })
                     .create();
             mAlertDialog.setCanceledOnTouchOutside(true);
@@ -2448,37 +2439,31 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
     private void selectAudioTrack() {
         setESTrackLists();
         selectTrack(mAudioTracksList, mService.getAudioTrack(), R.string.track_audio,
-                new TrackSelectedListener() {
-                    @Override
-                    public boolean onTrackSelected(int trackID) {
-                        if (trackID < -1 || mService == null)
-                            return false;
-                        MediaDatabase.getInstance().updateMedia(
-                                mUri,
-                                MediaDatabase.INDEX_MEDIA_AUDIOTRACK,
-                                trackID);
-                        mService.setAudioTrack(trackID);
-                        return true;
-                    }
+                trackID -> {
+                    if (trackID < -1 || mService == null)
+                        return false;
+                    MediaDatabase.getInstance().updateMedia(
+                            mUri,
+                            MediaDatabase.INDEX_MEDIA_AUDIOTRACK,
+                            trackID);
+                    mService.setAudioTrack(trackID);
+                    return true;
                 });
     }
 
     private void selectSubtitles() {
         setESTrackLists();
         selectTrack(mSubtitleTracksList, mService.getSpuTrack(), R.string.track_text,
-                new TrackSelectedListener() {
-                    @Override
-                    public boolean onTrackSelected(int trackID) {
-                        if (trackID < -1 || mService == null)
-                            return false;
+                trackID -> {
+                    if (trackID < -1 || mService == null)
+                        return false;
 
-                        MediaDatabase.getInstance().updateMedia(
-                                mUri,
-                                MediaDatabase.INDEX_MEDIA_SPUTRACK,
-                                trackID);
-                        mService.setSpuTrack(trackID);
-                        return true;
-                    }
+                    MediaDatabase.getInstance().updateMedia(
+                            mUri,
+                            MediaDatabase.INDEX_MEDIA_SPUTRACK,
+                            trackID);
+                    mService.setSpuTrack(trackID);
+                    return true;
                 });
     }
 
@@ -2963,6 +2948,19 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
         if (intent.getData() != null)
             mUri = intent.getData();
         if (extras != null) {
+            if (PLAY_FROM_TORRENT.equals(intent.getAction())) {
+                Torrent torrent = intent.getParcelableExtra(PLAY_EXTRA_TORRENT);
+
+                if (!torrentConnection.bound) {
+                    startService(new Intent(this, TorrentTaskService.class));
+                    bindService(new Intent(getApplicationContext(), TorrentTaskService.class),
+                            torrentConnection, Context.BIND_AUTO_CREATE);
+                    addTorrentsRequest(Collections.singletonList(torrent));
+                    return;
+                } else {
+                    mUri = Uri.parse("file://" + torrent.getDownloadPath() + "/" + torrent.getName());
+                }
+            }
             if (intent.hasExtra(PLAY_EXTRA_ITEM_LOCATION))
                 mUri = extras.getParcelable(PLAY_EXTRA_ITEM_LOCATION);
             fromStart = extras.getBoolean(PLAY_EXTRA_FROM_START, true);
@@ -3092,6 +3090,7 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
             showOverlay(true);
     }
 
+    @SuppressWarnings({"unchecked"})
     public void getSubtitles() {
         try {
             subs = suber().parse(new File("/storage/emulated/0/Download/example_video.srt")).subs;
@@ -3101,39 +3100,32 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
         }
 
         final String subtitleList_serialized = mSettings.getString(PreferencesActivity.VIDEO_SUBTITLE_FILES, null);
-        VLCApplication.runBackground(new Runnable() {
-            @Override
-            @SuppressWarnings({"unchecked"})
-            public void run() {
-                ArrayList<String> prefsList = new ArrayList<>();
-                if (subtitleList_serialized != null) {
-                    ByteArrayInputStream bis = new ByteArrayInputStream(subtitleList_serialized.getBytes());
-                    try {
-                        ObjectInputStream ois = new ObjectInputStream(bis);
-                        prefsList = (ArrayList<String>) ois.readObject();
-                    } catch (Exception ignored) {
-                    }
+        VLCApplication.runBackground(() -> {
+            ArrayList<String> prefsList = new ArrayList<>();
+            if (subtitleList_serialized != null) {
+                ByteArrayInputStream bis = new ByteArrayInputStream(subtitleList_serialized.getBytes());
+                try {
+                    ObjectInputStream ois = new ObjectInputStream(bis);
+                    prefsList = (ArrayList<String>) ois.readObject();
+                } catch (Exception ignored) {
                 }
-                if (!TextUtils.equals(mUri.getScheme(), "fd"))
-                    prefsList.addAll(MediaDatabase.getInstance().getSubtitles(mUri.getLastPathSegment()));
-                for (String x : prefsList) {
-                    if (!mSubtitleSelectedFiles.contains(x))
-                        mSubtitleSelectedFiles.add(x);
-                }
+            }
+            if (!TextUtils.equals(mUri.getScheme(), "fd"))
+                prefsList.addAll(MediaDatabase.getInstance().getSubtitles(mUri.getLastPathSegment()));
+            for (String x : prefsList) {
+                if (!mSubtitleSelectedFiles.contains(x))
+                    mSubtitleSelectedFiles.add(x);
+            }
 
-                // Add any selected subtitle file from the file picker
-                if (mSubtitleSelectedFiles.size() > 0) {
-                    mHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (mService != null)
-                                for (String file : mSubtitleSelectedFiles) {
-                                    Log.i(TAG, "Adding user-selected subtitle " + file);
-                                    mService.addSubtitleTrack(file, true);
-                                }
+            // Add any selected subtitle file from the file picker
+            if (mSubtitleSelectedFiles.size() > 0) {
+                mHandler.post(() -> {
+                    if (mService != null)
+                        for (String file : mSubtitleSelectedFiles) {
+                            Log.i(TAG, "Adding user-selected subtitle " + file);
+                            mService.addSubtitleTrack(file, true);
                         }
-                    });
-                }
+                });
             }
         });
     }
@@ -3220,16 +3212,8 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
         /* Encountered Error, exit player with a message */
         mAlertDialog = new AlertDialog.Builder(VideoPlayerActivity.this)
                 .setMessage(R.string.confirm_resume)
-                .setPositiveButton(R.string.resume_from_position, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        loadMedia(false);
-                    }
-                })
-                .setNegativeButton(R.string.play_from_start, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        loadMedia(true);
-                    }
-                })
+                .setPositiveButton(R.string.resume_from_position, (dialog, id) -> loadMedia(false))
+                .setNegativeButton(R.string.play_from_start, (dialog, id) -> loadMedia(true))
                 .create();
         mAlertDialog.setCancelable(false);
         mAlertDialog.show();
@@ -3238,12 +3222,7 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
     public void showAdvancedOptions() {
         FragmentManager fm = getSupportFragmentManager();
         AdvOptionsDialog advOptionsDialog = new AdvOptionsDialog();
-        advOptionsDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                dimStatusBar(true);
-            }
-        });
+        advOptionsDialog.setOnDismissListener(dialog -> dimStatusBar(true));
         advOptionsDialog.show(fm, "fragment_adv_options");
         hideOverlay(false);
     }
@@ -3540,4 +3519,83 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
                 exitOK();
         }
     };
+
+    private class TorrentCallbackHandler extends Handler {
+        boolean played = false;
+
+        @Override
+        public void handleMessage(Message msg) {
+            Bundle b;
+            TorrentStateParcel state;
+
+            switch (msg.what) {
+                case TorrentTaskServiceIPC.UPDATE_STATES_ONESHOT: {
+                    b = msg.getData();
+                    b.setClassLoader(TorrentStateParcel.class.getClassLoader());
+                    break;
+                }
+                case TorrentTaskServiceIPC.UPDATE_STATE:
+                    b = msg.getData();
+                    b.setClassLoader(TorrentStateParcel.class.getClassLoader());
+                    state = b.getParcelable(TorrentTaskServiceIPC.TAG_STATE);
+                    if (state.progress > 5 && !played) {
+                        loadMedia();
+                        played = true;
+                    }
+                    break;
+                case TorrentTaskServiceIPC.TERMINATE_ALL_CLIENTS:
+                    finish();
+                    break;
+                case TorrentTaskServiceIPC.TORRENTS_ADDED: {
+                    b = msg.getData();
+                    b.setClassLoader(TorrentStateParcel.class.getClassLoader());
+
+                    List<TorrentStateParcel> states =
+                            b.getParcelableArrayList(TorrentTaskServiceIPC.TAG_STATES_LIST);
+                    break;
+                }
+                default:
+                    super.handleMessage(msg);
+            }
+        }
+    }
+
+    private class TorrentServiceConnection implements ServiceConnection {
+        /* Flag indicating whether we have called bind on the service. */
+        public boolean bound;
+
+        public void onServiceConnected(ComponentName className, IBinder service) {
+            torrentServiceCallback = new Messenger(service);
+            bound = true;
+
+            if (!torrentsQueue.isEmpty()) {
+                addTorrentsRequest(torrentsQueue);
+                torrentsQueue.clear();
+            }
+
+            try {
+                torrentIpc.sendClientConnect(torrentServiceCallback, torrentClientCallback);
+            } catch (RemoteException e) {
+                Log.e(TAG, Log.getStackTraceString(e));
+            }
+        }
+
+        public void onServiceDisconnected(ComponentName className) {
+            torrentServiceCallback = null;
+            bound = false;
+        }
+    }
+
+    private void addTorrentsRequest(Collection<Torrent> torrents) {
+        if (!torrentConnection.bound || torrentServiceCallback == null) {
+            torrentsQueue.addAll(torrents);
+            return;
+        }
+        try {
+            torrentIpc.sendAddTorrents(torrentServiceCallback, new ArrayList<>(torrents));
+        } catch (RemoteException e) {
+            Log.e(TAG, Log.getStackTraceString(e));
+        }
+    }
+
 }

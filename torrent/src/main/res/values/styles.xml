@@ -120,7 +120,6 @@
         <item name="colorPrimaryDark">@color/primary_dark</item>
         <item name="android:windowBackground">@color/background</item>
         <item name="preferenceCategory_marginBottom">0dp</item>
-        <item name="android:layout">@layout/fragment_custom_preference</item>
         <item name="divider">@drawable/table_mode_divider</item>
     </style>
 
@@ -130,7 +129,6 @@
         <item name="colorPrimaryDark">@color/primary_dark</item>
         <item name="android:windowBackground">@color/background_dark</item>
         <item name="preferenceCategory_marginBottom">0dp</item>
-        <item name="android:layout">@layout/fragment_custom_preference</item>
         <item name="divider">@drawable/table_mode_divider_dark</item>
     </style>
 

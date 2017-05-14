@@ -1,19 +1,12 @@
 package org.videolan.vlc.gui.torrent;
 
 import android.app.FragmentTransaction;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.IBinder;
-import android.os.Message;
-import android.os.Messenger;
 import android.os.PersistableBundle;
-import android.os.RemoteException;
 import android.support.annotation.Nullable;
 import android.support.annotation.StringRes;
 import android.support.design.widget.Snackbar;
@@ -37,29 +30,24 @@ import org.proninyaroslav.libretorrent.core.BencodeFileItem;
 import org.proninyaroslav.libretorrent.core.Torrent;
 import org.proninyaroslav.libretorrent.core.TorrentFetcher;
 import org.proninyaroslav.libretorrent.core.TorrentMetaInfo;
-import org.proninyaroslav.libretorrent.core.TorrentTaskServiceIPC;
 import org.proninyaroslav.libretorrent.core.exceptions.DecodeException;
 import org.proninyaroslav.libretorrent.core.exceptions.FetchLinkException;
 import org.proninyaroslav.libretorrent.core.filetree.BencodeFileTree;
 import org.proninyaroslav.libretorrent.core.filetree.FileNode;
-import org.proninyaroslav.libretorrent.core.stateparcel.TorrentStateParcel;
-import org.proninyaroslav.libretorrent.core.utils.BencodeFileTreeUtils;
+import org.videolan.vlc.gui.view.BencodeFileTreeUtils;
 import org.proninyaroslav.libretorrent.core.utils.FileIOUtils;
 import org.proninyaroslav.libretorrent.core.utils.TorrentUtils;
 import org.proninyaroslav.libretorrent.core.utils.Utils;
-import org.proninyaroslav.libretorrent.dialogs.BaseAlertDialog;
-import org.proninyaroslav.libretorrent.dialogs.ErrorReportAlertDialog;
-import org.proninyaroslav.libretorrent.dialogs.SpinnerProgressDialog;
-import org.proninyaroslav.libretorrent.fragments.FragmentCallback;
-import org.proninyaroslav.libretorrent.services.TorrentTaskService;
+import org.videolan.vlc.gui.torrent.dialogs.BaseAlertDialog;
+import org.videolan.vlc.gui.torrent.dialogs.ErrorReportAlertDialog;
+import org.videolan.vlc.gui.torrent.dialogs.SpinnerProgressDialog;
 import org.proninyaroslav.libretorrent.utils.FileUtils;
+import org.videolan.vlc.gui.video.VideoPlayerActivity;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 
 public class AddTorrentActivity extends AppCompatActivity
@@ -102,40 +90,6 @@ public class AddTorrentActivity extends AppCompatActivity
     private String pathToTempTorrent;
     private boolean saveTorrentFile = true;
     private boolean hasTorrent = false;
-
-    /* Messenger for communicating with the service. */
-    private Messenger serviceCallback = null;
-    private Messenger clientCallback = new Messenger(new CallbackHandler());
-    private TorrentTaskServiceIPC ipc = new TorrentTaskServiceIPC();
-    /* Flag indicating whether we have called bind on the service. */
-    private boolean bound;
-    /*
-   * Torrents are added to the queue, if the client is not bounded to service.
-   * Trying to add torrents will be made at the first connect.
-   */
-    private HashSet<Torrent> torrentsQueue = new HashSet<>();
-    private ServiceConnection connection = new ServiceConnection() {
-        public void onServiceConnected(ComponentName className, IBinder service) {
-            serviceCallback = new Messenger(service);
-            bound = true;
-
-            if (!torrentsQueue.isEmpty()) {
-                addTorrentsRequest(torrentsQueue);
-                torrentsQueue.clear();
-            }
-
-            try {
-                ipc.sendClientConnect(serviceCallback, clientCallback);
-            } catch (RemoteException e) {
-                Log.e(TAG, Log.getStackTraceString(e));
-            }
-        }
-
-        public void onServiceDisconnected(ComponentName className) {
-            serviceCallback = null;
-            bound = false;
-        }
-    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -204,9 +158,6 @@ public class AddTorrentActivity extends AppCompatActivity
             decodeTask = new TorrentDecodeTask(progressDialogText.toString());
             decodeTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, uri);
         }
-
-        bindService(new Intent(getApplicationContext(), TorrentTaskService.class),
-                connection, Context.BIND_AUTO_CREATE);
     }
 
     @Override
@@ -221,16 +172,6 @@ public class AddTorrentActivity extends AppCompatActivity
             } catch (IOException e) {
                 Log.w(TAG, "Could not delete temp file: ", e);
             }
-        }
-
-        if (bound) {
-            try {
-                ipc.sendClientDisconnect(serviceCallback, clientCallback);
-            } catch (RemoteException e) {
-                Log.e(TAG, Log.getStackTraceString(e));
-            }
-            unbindService(connection);
-            bound = false;
         }
     }
 
@@ -580,8 +521,8 @@ public class AddTorrentActivity extends AppCompatActivity
 
                     saveTorrentFile = true;
 
-                    addTorrentsRequest(Collections.singleton(torrent));
-//                    finish();
+                    VideoPlayerActivity.start(this, torrent);
+                    finish();
                 } else {
                     showSnackbar(R.string.error_free_space, Snackbar.LENGTH_LONG);
                 }
@@ -596,89 +537,6 @@ public class AddTorrentActivity extends AppCompatActivity
         View view = findViewById(android.R.id.content);
         if (view != null) {
             Snackbar.make(view, resId, duration).show();
-        }
-    }
-
-    private void addTorrentsRequest(Collection<Torrent> torrents) {
-        if (!bound || serviceCallback == null) {
-            torrentsQueue.addAll(torrents);
-            return;
-        }
-
-        try {
-            ipc.sendAddTorrents(serviceCallback, new ArrayList<>(torrents));
-
-        } catch (RemoteException e) {
-            Log.e(TAG, Log.getStackTraceString(e));
-        }
-    }
-
-    private class CallbackHandler extends Handler {
-        @Override
-        public void handleMessage(Message msg) {
-            Bundle b;
-            TorrentStateParcel state;
-
-            switch (msg.what) {
-                case TorrentTaskServiceIPC.UPDATE_STATES_ONESHOT: {
-                    b = msg.getData();
-                    b.setClassLoader(TorrentStateParcel.class.getClassLoader());
-
-//                    Bundle states = b.getParcelable(TorrentTaskServiceIPC.TAG_STATES_LIST);
-//                    if (states != null) {
-//                        fragment.get().torrentStates.clear();
-//
-//                        for (String key : states.keySet()) {
-//                            state = states.getParcelable(key);
-//                            if (state != null) {
-//                                fragment.get().torrentStates.put(state.torrentId, state);
-//                            }
-//                        }
-//
-//                        fragment.get().reloadAdapter();
-//                    }
-                    break;
-                }
-                case TorrentTaskServiceIPC.UPDATE_STATE:
-                    b = msg.getData();
-                    b.setClassLoader(TorrentStateParcel.class.getClassLoader());
-                    state = b.getParcelable(TorrentTaskServiceIPC.TAG_STATE);
-
-//                    if (state != null) {
-//                        fragment.get().torrentStates.put(state.torrentId, state);
-//                        fragment.get().reloadAdapterItem(state);
-//                    }
-                    break;
-                case TorrentTaskServiceIPC.TERMINATE_ALL_CLIENTS:
-                    finish();
-                    break;
-                case TorrentTaskServiceIPC.TORRENTS_ADDED: {
-                    b = msg.getData();
-                    b.setClassLoader(TorrentStateParcel.class.getClassLoader());
-
-                    List<TorrentStateParcel> states =
-                            b.getParcelableArrayList(TorrentTaskServiceIPC.TAG_STATES_LIST);
-
-//                    if (states != null && !states.isEmpty()) {
-//                        for (TorrentStateParcel s : states) {
-//                            fragment.get().torrentStates.put(s.torrentId, s);
-//                        }
-//
-//                        fragment.get().reloadAdapter();
-//                    }
-//
-//                    Object o = b.getSerializable(TorrentTaskServiceIPC.TAG_EXCEPTIONS_LIST);
-//                    if (o != null) {
-//                        ArrayList<Throwable> exceptions = (ArrayList<Throwable>) o;
-//                        for (Throwable e : exceptions) {
-//                            fragment.get().saveTorrentError(e);
-//                        }
-//                    }
-                    break;
-                }
-                default:
-                    super.handleMessage(msg);
-            }
         }
     }
 

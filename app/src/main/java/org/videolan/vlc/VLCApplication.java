@@ -1,4 +1,4 @@
-/*****************************************************************************
+/* ****************************************************************************
  * VLCApplication.java
  *****************************************************************************
  * Copyright © 2010-2013 VLC authors and VideoLAN
@@ -22,11 +22,9 @@ package org.videolan.vlc;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.res.Configuration;
 import android.content.res.Resources;
+import android.os.Handler;
 import android.os.Process;
-import android.preference.PreferenceManager;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.util.SimpleArrayMap;
 import android.util.Log;
@@ -35,6 +33,7 @@ import com.timursoft.izya.di.AndroidModule;
 import com.timursoft.izya.di.AppComponent;
 import com.timursoft.izya.di.DaggerAppComponent;
 
+import org.proninyaroslav.libretorrent.core.utils.FileIOUtils;
 import org.videolan.libvlc.Dialog;
 import org.videolan.vlc.gui.DialogActivity;
 import org.videolan.vlc.gui.dialogs.VlcProgressDialog;
@@ -45,7 +44,6 @@ import org.videolan.vlc.util.Strings;
 import org.videolan.vlc.util.VLCInstance;
 
 import java.util.Calendar;
-import java.util.Locale;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -64,14 +62,11 @@ public class VLCApplication extends Application {
 
     /* Up to 2 threads maximum, inactive threads are killed after 2 seconds */
     private ThreadPoolExecutor mThreadPool = new ThreadPoolExecutor(0, 2, 2, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<Runnable>(), THREAD_FACTORY);
-    public static final ThreadFactory THREAD_FACTORY = new ThreadFactory() {
-        @Override
-        public Thread newThread(Runnable runnable) {
-            Thread thread = new Thread(runnable);
-            thread.setPriority(Process.THREAD_PRIORITY_DEFAULT+Process.THREAD_PRIORITY_LESS_FAVORABLE);
-            return thread;
-        }
+            new LinkedBlockingQueue<>(), THREAD_FACTORY);
+    public static final ThreadFactory THREAD_FACTORY = runnable -> {
+        Thread thread = new Thread(runnable);
+        thread.setPriority(Process.THREAD_PRIORITY_DEFAULT+Process.THREAD_PRIORITY_LESS_FAVORABLE);
+        return thread;
     };
 
     private static int sDialogCounter = 0;
@@ -94,6 +89,8 @@ public class VLCApplication extends Application {
         appComponent = DaggerAppComponent.builder()
                 .androidModule(new AndroidModule(this))
                 .build();
+
+        cleanTempDir();
     }
 
     public static AppComponent getAppComponent() {
@@ -117,6 +114,17 @@ public class VLCApplication extends Application {
         Log.w(TAG, "onTrimMemory, level: "+level);
 
         BitmapCache.getInstance().clear();
+    }
+
+    private void cleanTempDir() {
+        Handler handler = new Handler(getMainLooper());
+        handler.post(() -> {
+            try {
+                FileIOUtils.cleanTempDir(getBaseContext());
+            } catch (Exception e) {
+                Log.e(TAG, "Error during setup of temp directory: ", e);
+            }
+        });
     }
 
     /**
@@ -193,4 +201,5 @@ public class VLCApplication extends Application {
         startActivity(new Intent(instance, DialogActivity.class).setAction(key)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
+
 }

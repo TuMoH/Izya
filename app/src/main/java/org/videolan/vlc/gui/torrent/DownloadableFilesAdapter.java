@@ -30,21 +30,22 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import org.proninyaroslav.libretorrent.R;
-import org.proninyaroslav.libretorrent.adapters.BaseFileListAdapter;
 import org.proninyaroslav.libretorrent.core.filetree.BencodeFileTree;
 import org.proninyaroslav.libretorrent.core.filetree.FileNode;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 /*
  * The adapter for representation of downloadable files in a file tree view.
  */
-public class DownloadableFilesAdapter
-        extends BaseFileListAdapter<DownloadableFilesAdapter.ViewHolder, BencodeFileTree> {
+public class DownloadableFilesAdapter extends RecyclerView.Adapter<DownloadableFilesAdapter.ViewHolder> {
+
     private Context context;
     private ViewHolder.ClickListener clickListener;
     private int rowLayout;
+    protected List<BencodeFileTree> files;
 
     public DownloadableFilesAdapter(List<BencodeFileTree> files, Context context,
                                     int rowLayout, ViewHolder.ClickListener clickListener) {
@@ -53,6 +54,31 @@ public class DownloadableFilesAdapter
         this.clickListener = clickListener;
         Collections.sort(files);
         this.files = files;
+    }
+
+    public synchronized void addFiles(Collection<BencodeFileTree> files) {
+        this.files.addAll(files);
+        Collections.sort(this.files);
+        notifyItemRangeInserted(0, files.size() - 1);
+    }
+
+    public void clearFiles() {
+        int size = files.size();
+        if (size > 0) {
+            files.clear();
+
+            this.notifyItemRangeRemoved(0, size);
+        }
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        return files.get(position).getType();
+    }
+
+    @Override
+    public int getItemCount() {
+        return files == null ? 0 : files.size();
     }
 
     @Override

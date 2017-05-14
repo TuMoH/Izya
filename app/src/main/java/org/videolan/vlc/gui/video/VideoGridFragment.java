@@ -1,4 +1,4 @@
-/*****************************************************************************
+/* ****************************************************************************
  * VideoListActivity.java
  *****************************************************************************
  * Copyright © 2011-2012 VLC authors and VideoLAN
@@ -22,8 +22,6 @@ package org.videolan.vlc.gui.video;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
-import android.animation.AnimatorSet;
-import android.animation.ObjectAnimator;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -67,7 +65,6 @@ import com.timursoft.izya.R;
 
 import org.proninyaroslav.libretorrent.core.utils.Utils;
 import org.videolan.libvlc.Media;
-import org.videolan.libvlc.util.AndroidUtil;
 import org.videolan.vlc.VLCApplication;
 import org.videolan.vlc.gui.MainActivity;
 import org.videolan.vlc.gui.SecondaryActivity;
@@ -99,7 +96,6 @@ public class VideoGridFragment extends MediaBrowserFragment
     public final static String TAG = "VLC/VideoListFragment";
 
     public final static String KEY_GROUP = "key_group";
-    private static final String TAG_ADD_TORRENT_LINK_DIALOG = "add_torrent_link_dialog";
 
     protected LinearLayout mLayoutFlipperLoading;
     protected AutoFitRecyclerView mGridView;
@@ -111,7 +107,6 @@ public class VideoGridFragment extends MediaBrowserFragment
     protected TextView addTorrentText;
     protected TextInputLayout addTorrentTextLayout;
     protected ImageView addTorrentOk;
-    protected ImageView addTorrentCancel;
     protected CardView addTorrentCard;
 
     private VideoListAdapter mVideoAdapter;
@@ -177,9 +172,6 @@ public class VideoGridFragment extends MediaBrowserFragment
                 closeAddTorrentLayout();
             }
         });
-
-        addTorrentCancel = (ImageView) view.findViewById(R.id.add_torrent_cancel);
-        addTorrentCancel.setOnClickListener(v -> closeAddTorrentLayout());
 
         addTorrentTextLayout = (TextInputLayout) view.findViewById(R.id.add_torrent_text_layout);
         addTorrentText = (TextView) view.findViewById(R.id.add_torrent_text);
@@ -375,17 +367,9 @@ public class VideoGridFragment extends MediaBrowserFragment
             case R.id.video_list_delete:
                 mVideoAdapter.remove(position);
                 if (getView() != null)
-                    UiTools.snackerWithCancel(getView(), getString(R.string.file_deleted), new Runnable() {
-                        @Override
-                        public void run() {
-                            deleteMedia(media);
-                        }
-                    }, new Runnable() {
-                        @Override
-                        public void run() {
-                            mVideoAdapter.add(media);
-                        }
-                    });
+                    UiTools.snackerWithCancel(getView(), getString(R.string.file_deleted),
+                            () -> deleteMedia(media),
+                            () -> mVideoAdapter.add(media));
                 return true;
             case R.id.video_group_play:
                 MediaUtils.openList(getActivity(), ((MediaGroup) media).getAll(), 0);
@@ -414,13 +398,9 @@ public class VideoGridFragment extends MediaBrowserFragment
             return;
         MenuInflater inflater = getActivity().getMenuInflater();
         inflater.inflate(media instanceof MediaGroup ? R.menu.video_group_contextual : R.menu.video_list, menu);
-        if (media instanceof MediaGroup) {
-            if (!AndroidUtil.isHoneycombOrLater()) {
-                menu.findItem(R.id.video_list_append).setVisible(false);
-                menu.findItem(R.id.video_group_play).setVisible(false);
-            }
-        } else
+        if (!(media instanceof MediaGroup)) {
             setContextMenuItems(menu, media);
+        }
     }
 
     private void setContextMenuItems(Menu menu, MediaWrapper mediaWrapper) {
@@ -437,10 +417,6 @@ public class VideoGridFragment extends MediaBrowserFragment
         media.release();
         menu.findItem(R.id.video_list_info).setVisible(hasInfo);
         menu.findItem(R.id.video_list_delete).setVisible(canWrite);
-        if (!AndroidUtil.isHoneycombOrLater()) {
-            menu.findItem(R.id.video_list_play_all).setVisible(false);
-            menu.findItem(R.id.video_list_append).setVisible(false);
-        }
     }
 
     @Override
@@ -467,42 +443,36 @@ public class VideoGridFragment extends MediaBrowserFragment
         final List<MediaWrapper> itemList = mMediaLibrary.getVideoItems();
 
         if (itemList.size() > 0) {
-            VLCApplication.runBackground(new Runnable() {
-                @Override
-                public void run() {
-                    final ArrayList<MediaWrapper> displayList = new ArrayList<>();
-                    final ArrayList<MediaWrapper> jobsList = new ArrayList<>();
-                    if (mGroup != null || itemList.size() <= 10) {
-                        for (MediaWrapper item : itemList) {
-                            String title = item.getTitle().substring(item.getTitle().toLowerCase().startsWith("the") ? 4 : 0);
-                            if (mGroup == null || title.toLowerCase().startsWith(mGroup.toLowerCase()))
-                                displayList.add(item);
-                            jobsList.add(item);
-                        }
-                    } else {
-                        List<MediaGroup> groups = MediaGroup.group(itemList);
-                        for (MediaGroup item : groups) {
-                            displayList.add(item.getMedia());
-                            for (MediaWrapper media : item.getAll())
-                                jobsList.add(media);
-                        }
+            VLCApplication.runBackground(() -> {
+                final ArrayList<MediaWrapper> displayList = new ArrayList<>();
+                final ArrayList<MediaWrapper> jobsList = new ArrayList<>();
+                if (mGroup != null || itemList.size() <= 10) {
+                    for (MediaWrapper item : itemList) {
+                        String title = item.getTitle().substring(item.getTitle().toLowerCase().startsWith("the") ? 4 : 0);
+                        if (mGroup == null || title.toLowerCase().startsWith(mGroup.toLowerCase()))
+                            displayList.add(item);
+                        jobsList.add(item);
                     }
+                } else {
+                    List<MediaGroup> groups = MediaGroup.group(itemList);
+                    for (MediaGroup item : groups) {
+                        displayList.add(item.getMedia());
+                        for (MediaWrapper media : item.getAll())
+                            jobsList.add(media);
+                    }
+                }
 
-                    mHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            mVideoAdapter.clear();
-                            mVideoAdapter.addAll(displayList);
-                            if (mReadyToDisplay)
-                                display();
-                        }
-                    });
-                    if (mThumbnailer != null && !jobsList.isEmpty()) {
-                        mThumbnailer.clearJobs();
-                        mThumbnailer.start(VideoGridFragment.this);
-                        for (MediaWrapper item : jobsList)
-                            mThumbnailer.addJob(item);
-                    }
+                mHandler.post(() -> {
+                    mVideoAdapter.clear();
+                    mVideoAdapter.addAll(displayList);
+                    if (mReadyToDisplay)
+                        display();
+                });
+                if (mThumbnailer != null && !jobsList.isEmpty()) {
+                    mThumbnailer.clearJobs();
+                    mThumbnailer.start(VideoGridFragment.this);
+                    for (MediaWrapper item : jobsList)
+                        mThumbnailer.addJob(item);
                 }
             });
         }
@@ -551,12 +521,7 @@ public class VideoGridFragment extends MediaBrowserFragment
                 if (mVideoAdapter.getItem(i) instanceof MediaGroup &&
                         ((MediaGroup) mVideoAdapter.getItem(i)).getFirstMedia().equals(item)) {
                     final int position = i;
-                    mHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            mVideoAdapter.notifyItemChanged(position);
-                        }
-                    });
+                    mHandler.post(() -> mVideoAdapter.notifyItemChanged(position));
                     return;
                 }
             }
@@ -592,14 +557,11 @@ public class VideoGridFragment extends MediaBrowserFragment
     @Override
     public void display() {
         if (getActivity() != null)
-            getActivity().runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mVideoAdapter.notifyDataSetChanged();
-                    mViewNomedia.setVisibility(mVideoAdapter.getItemCount() > 0 ? View.GONE : View.VISIBLE);
-                    mReadyToDisplay = true;
-                    mGridView.requestFocus();
-                }
+            getActivity().runOnUiThread(() -> {
+                mVideoAdapter.notifyDataSetChanged();
+                mViewNomedia.setVisibility(mVideoAdapter.getItemCount() > 0 ? View.GONE : View.VISIBLE);
+                mReadyToDisplay = true;
+                mGridView.requestFocus();
             });
     }
 
@@ -608,12 +570,9 @@ public class VideoGridFragment extends MediaBrowserFragment
     }
 
     public void deleteMedia(final MediaWrapper media) {
-        VLCApplication.runBackground(new Runnable() {
-            @Override
-            public void run() {
-                FileUtils.deleteFile(media.getUri().getPath());
-                MediaDatabase.getInstance().removeMedia(media.getUri());
-            }
+        VLCApplication.runBackground(() -> {
+            FileUtils.deleteFile(media.getUri().getPath());
+            MediaDatabase.getInstance().removeMedia(media.getUri());
         });
         mMediaLibrary.getMediaItems().remove(media);
         if (mService != null) {
@@ -673,9 +632,9 @@ public class VideoGridFragment extends MediaBrowserFragment
 
         final Animator circularReveal =
                 ViewAnimationUtils.createCircularReveal(addTorrentCard, bounds.centerX(),
-                addTorrentCard.getHeight() / 2,
-                (float) Math.hypot(maskBounds.width(), maskBounds.height()),
-                addTorrentButton.getWidth(), View.LAYER_TYPE_HARDWARE);
+                        addTorrentCard.getHeight() / 2,
+                        (float) Math.hypot(maskBounds.width(), maskBounds.height()),
+                        addTorrentButton.getWidth(), View.LAYER_TYPE_HARDWARE);
 
         circularReveal.setInterpolator(new AccelerateInterpolator());
         circularReveal.setDuration(150);
@@ -692,7 +651,7 @@ public class VideoGridFragment extends MediaBrowserFragment
 
     private void checkLinkFromClipboard() {
         // TODO: 05.04.17 debug only
-        addTorrentText.setText("magnet:?xt=urn:btih:3307944256656f60d4847df2d90e6aef663db7d4&dn=rutor.info_Том+Шродер+-+Старые+души+%281999%29+PDF&tr=udp://opentor.org:2710&tr=udp://opentor.org:2710&tr=http://retracker.local/announce");
+        addTorrentText.setText("magnet:?xt=urn:btih:EE2824E7702579F176E7D2D132F3A88A49E5A5FF&dn=Prison.Break.S05E05.rus.LostFilm.TV.avi&tr=http%3a%2f%2fbt9.tracktor.in%2ftracker.php%2fc55e62cef9e6c9e148429aa7df711135%2fannounce&tr=http%3a%2f%2fbt99.tracktor.in%2ftracker.php%2fc55e62cef9e6c9e148429aa7df711135%2fannounce");
 
         /* Inserting a link from the clipboard */
         String clipboard = Utils.getClipboard(getActivity().getApplicationContext());

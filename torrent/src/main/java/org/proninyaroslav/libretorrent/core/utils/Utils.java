@@ -23,22 +23,16 @@ import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
-import android.os.BatteryManager;
 import android.os.Build;
 import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
-import android.text.TextUtils;
 import android.util.Patterns;
-import android.util.TypedValue;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
@@ -49,13 +43,9 @@ import org.acra.ACRA;
 import org.acra.ReportField;
 import org.proninyaroslav.libretorrent.R;
 import org.proninyaroslav.libretorrent.core.BencodeFileItem;
-import org.proninyaroslav.libretorrent.core.sorting.TorrentSorting;
-import org.proninyaroslav.libretorrent.settings.SettingsManager;
+import org.proninyaroslav.libretorrent.SettingsManager;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /*
  * General utils.
@@ -68,8 +58,6 @@ public class Utils {
     public static final String HTTPS_PREFIX = "https";
     public static final String FILE_PREFIX = "file";
     public static final String CONTENT_PREFIX = "content";
-    public static final String TRACKER_URL_PATTERN =
-            "^(https?|udp)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
 
     /*
      * Colored status bar in KitKat.
@@ -80,18 +68,6 @@ public class Utils {
 
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT) {
             statusBar.setVisibility(View.VISIBLE);
-        }
-    }
-
-    public static void showActionModeStatusBar(Activity activity, boolean mode) {
-        int color = (mode ? R.color.action_mode_dark : R.color.primary_dark);
-        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT) {
-            RelativeLayout statusBar = (RelativeLayout) activity.findViewById(R.id.statusBarKitKat);
-            statusBar.setBackground(ContextCompat.getDrawable(activity, color));
-            statusBar.setVisibility(View.VISIBLE);
-
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            activity.getWindow().setStatusBarColor(ContextCompat.getColor(activity, color));
         }
     }
 
@@ -125,23 +101,6 @@ public class Utils {
 
     public static void setBackground(View v, Drawable d) {
         v.setBackground(d);
-    }
-
-    public static byte[] toPrimitive(Collection<Byte> array) {
-        if (array == null) {
-            return null;
-        } else if (array.isEmpty()) {
-            return new byte[]{};
-        }
-
-        final byte[] result = new byte[array.size()];
-
-        int i = 0;
-        for (Byte b : array) {
-            result[i++] = b;
-        }
-
-        return result;
     }
 
     /*
@@ -208,35 +167,6 @@ public class Utils {
     }
 
     /*
-     * Returns true if link has the form "http[s][udp]://[www.]name.domain/...".
-     *
-     * Returns false if the link is not valid.
-     */
-
-    public static boolean isValidTrackerUrl(String url) {
-        if (url == null || TextUtils.isEmpty(url)) {
-            return false;
-        }
-
-        Pattern pattern = Pattern.compile(TRACKER_URL_PATTERN);
-        Matcher matcher = pattern.matcher(url.trim());
-
-        return matcher.matches();
-    }
-
-    /*
-     * Return system text line separator (in android it '\n').
-     */
-
-    public static String getLineSeparator() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
-            return System.lineSeparator();
-        } else {
-            return System.getProperty("line.separator");
-        }
-    }
-
-    /*
      * Returns the first item from clipboard.
      */
 
@@ -275,38 +205,6 @@ public class Utils {
         ACRA.getErrorReporter().handleSilentException(error);
     }
 
-    public static int dpToPx(Context context, float dp) {
-        return (int) TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP,
-                dp, context.getResources().getDisplayMetrics());
-    }
-
-    public static int getDefaultBatteryLowLevel() {
-        return Resources.getSystem().getInteger(
-                Resources.getSystem().getIdentifier("config_lowBatteryWarningLevel", "integer", "android"));
-    }
-
-    public static float getBatteryLevel(Context context) {
-        Intent batteryIntent = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-        int level = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-        int scale = batteryIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-
-        /* Error checking that probably isn't needed but I added just in case */
-        if (level == -1 || scale == -1) {
-            return 50.0f;
-        }
-
-        return ((float) level / (float) scale) * 100.0f;
-    }
-
-    public static boolean isBatteryCharging(Context context) {
-        Intent batteryIntent = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-        int status = batteryIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
-
-        return status == BatteryManager.BATTERY_STATUS_CHARGING ||
-                status == BatteryManager.BATTERY_STATUS_FULL;
-    }
-
     public static boolean isDarkTheme(Context context) {
         SettingsManager pref = new SettingsManager(context);
 
@@ -317,15 +215,4 @@ public class Utils {
         return theme == dark;
     }
 
-    public static TorrentSorting getTorrentSorting(Context context) {
-        SettingsManager pref = new SettingsManager(context);
-
-        String column = pref.getString(context.getString(R.string.pref_key_sort_torrent_by),
-                TorrentSorting.SortingColumns.name.name());
-        String direction = pref.getString(context.getString(R.string.pref_key_sort_torrent_direction),
-                TorrentSorting.Direction.ASC.name());
-
-        return new TorrentSorting(TorrentSorting.SortingColumns.fromValue(column),
-                TorrentSorting.Direction.fromValue(direction));
-    }
 }

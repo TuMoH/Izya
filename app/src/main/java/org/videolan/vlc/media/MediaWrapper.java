@@ -1,4 +1,4 @@
-/*****************************************************************************
+/* ****************************************************************************
  * MediaWrapper.java
  *****************************************************************************
  * Copyright © 2011-2015 VLC authors and VideoLAN
@@ -499,7 +499,7 @@ public class MediaWrapper implements Parcelable {
         init(in.readLong(),
                 in.readLong(),
                 in.readInt(),
-                (Bitmap) in.readParcelable(Bitmap.class.getClassLoader()),
+                in.readParcelable(Bitmap.class.getClassLoader()),
                 in.readString(),
                 in.readString(),
                 in.readString(),

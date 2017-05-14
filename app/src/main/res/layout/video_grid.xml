@@ -126,7 +126,7 @@
             android:layout_gravity="center_vertical"
             android:visibility="invisible"
             app:cardBackgroundColor="?attr/colorAccent"
-            app:cardCornerRadius="28dp"
+            app:cardCornerRadius="10dp"
             tools:visibility="visible">
 
             <LinearLayout
@@ -152,15 +152,6 @@
                         android:textColor="#fff" />
 
                 </android.support.design.widget.TextInputLayout>
-
-                <ImageView
-                    android:id="@+id/add_torrent_cancel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:paddingLeft="12dp"
-                    android:paddingRight="12dp"
-                    android:tint="#fff"
-                    android:src="@drawable/ic_clear" />
 
                 <ImageView
                     android:id="@+id/add_torrent_ok"

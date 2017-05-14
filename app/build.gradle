@@ -33,6 +33,12 @@ android {
             include 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
         }
     }
+    packagingOptions {
+        merge 'lib/armeabi-v7a/libjlibtorrent.so'
+        merge 'lib/arm64-v8a/libjlibtorrent.so'
+        merge 'lib/x86/libjlibtorrent.so'
+        merge 'lib/x86_64/libjlibtorrent.so'
+    }
 }
 
 dependencies {
@@ -65,10 +71,4 @@ dependencies {
     compile ('com.github.ozodrukh:CircularReveal:2.0.1@aar') {
         transitive = true;
     }
-
-    compile "com.frostwire:jlibtorrent:$jlibtorrent"
-    compile "com.frostwire:jlibtorrent-android-arm:$jlibtorrent"
-    compile "com.frostwire:jlibtorrent-android-arm64:$jlibtorrent"
-    compile "com.frostwire:jlibtorrent-android-x86:$jlibtorrent"
-    compile "com.frostwire:jlibtorrent-android-x86_64:$jlibtorrent"
 }

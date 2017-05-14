@@ -27,7 +27,7 @@ import android.util.Log;
 import org.proninyaroslav.libretorrent.utils.FileUtils;
 import org.proninyaroslav.libretorrent.R;
 import org.proninyaroslav.libretorrent.core.storage.TorrentStorage;
-import org.proninyaroslav.libretorrent.settings.SettingsManager;
+import org.proninyaroslav.libretorrent.SettingsManager;
 
 import java.io.File;
 import java.io.FileNotFoundException;
