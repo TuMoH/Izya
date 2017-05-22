@@ -651,7 +651,7 @@ public class VideoGridFragment extends MediaBrowserFragment
 
     private void checkLinkFromClipboard() {
         // TODO: 05.04.17 debug only
-        addTorrentText.setText("magnet:?xt=urn:btih:EE2824E7702579F176E7D2D132F3A88A49E5A5FF&dn=Prison.Break.S05E05.rus.LostFilm.TV.avi&tr=http%3a%2f%2fbt9.tracktor.in%2ftracker.php%2fc55e62cef9e6c9e148429aa7df711135%2fannounce&tr=http%3a%2f%2fbt99.tracktor.in%2ftracker.php%2fc55e62cef9e6c9e148429aa7df711135%2fannounce");
+        addTorrentText.setText("magnet:?xt=urn:btih:d5d212fb6f619843f1a708462072609f1ef01a4e&dn=Marvels.Agents.of.S.H.I.E.L.D.S04E22.rus.LostFilm.TV.avi&tr=http%3a%2f%2fbt10.tracktor.in%2ftracker.php%2fc55e62cef9e6c9e148429aa7df711135%2fannounce&tr=http%3a%2f%2fbt99.tracktor.in%2ftracker.php%2fc55e62cef9e6c9e148429aa7df711135%2fannounce");
 
         /* Inserting a link from the clipboard */
         String clipboard = Utils.getClipboard(getActivity().getApplicationContext());

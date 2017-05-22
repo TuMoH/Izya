@@ -1303,15 +1303,15 @@ public class TorrentTaskService extends Service
 //                        startupIntent,
 //                        PendingIntent.FLAG_UPDATE_CURRENT);
 //
-//        foregroundNotify = new NotificationCompat.Builder(getApplicationContext())
-//                .setSmallIcon(R.drawable.ic_app_notification)
+        foregroundNotify = new NotificationCompat.Builder(getApplicationContext())
+                .setSmallIcon(R.drawable.ic_power_settings_new_white_24dp)
 //                .setContentIntent(startupPendingIntent)
-//                .setContentTitle(getString(R.string.app_running_in_the_background))
-//                .setTicker(getString(R.string.app_running_in_the_background))
-//                .setContentText((isNetworkOnline ?
-//                        getString(R.string.network_online) :
-//                        getString(R.string.network_offline)))
-//                .setWhen(System.currentTimeMillis());
+                .setContentTitle(getString(R.string.app_running_in_the_background))
+                .setTicker(getString(R.string.app_running_in_the_background))
+                .setContentText((isNetworkOnline ?
+                        getString(R.string.network_online) :
+                        getString(R.string.network_offline)))
+                .setWhen(System.currentTimeMillis());
 
         /* For shutdown activity and service */
         Intent shutdownIntent =

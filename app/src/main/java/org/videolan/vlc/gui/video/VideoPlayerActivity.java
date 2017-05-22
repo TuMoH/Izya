@@ -56,6 +56,7 @@ import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.content.LocalBroadcastManager;
@@ -68,6 +69,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.PopupMenu;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
+import android.text.Html;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.TextPaint;
@@ -153,6 +155,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import rx.Observable;
 import rx.Subscription;
@@ -193,11 +197,12 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
 
     public static final int SUB_TIME_OFFSET = 80;
     public static final int SUB_TIME_REMOVE_OFFSET = 200;
+    public static final Pattern SUB_FILE_PATTERN = Pattern.compile(".*\\.(srt|ass|ssa)$");
+    public static final Pattern SUB_FILE_PATH_PATTERN = Pattern.compile("^(.*)/([^/]*)\\.[^\\./]*$");
 
     private final PlaybackServiceActivity.Helper mHelper = new PlaybackServiceActivity.Helper(this, this);
     private PlaybackService mService;
     private SurfaceView mSurfaceView = null;
-    private SurfaceView mSubtitlesSurfaceView = null;
     private View mRootView;
     private FrameLayout mSurfaceFrame;
     private MediaRouter mMediaRouter;
@@ -478,10 +483,6 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
         mPlaybackSettingMinus = (ImageView) findViewById(R.id.player_delay_minus);
 
         mSurfaceView = (SurfaceView) findViewById(R.id.player_surface);
-        mSubtitlesSurfaceView = (SurfaceView) findViewById(R.id.subtitles_surface);
-
-        mSubtitlesSurfaceView.setZOrderMediaOverlay(true);
-        mSubtitlesSurfaceView.getHolder().setFormat(PixelFormat.TRANSLUCENT);
 
         mSurfaceFrame = (FrameLayout) findViewById(R.id.player_surface_frame);
 
@@ -590,12 +591,13 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
         lastPlayedPosition = i;
 
         String text = subs.get(i).content.trim();
-        SpannableStringBuilder ssb = new SpannableStringBuilder(text);
-        BreakIterator iterator = BreakIterator.getWordInstance(Locale.US);
-        iterator.setText(text);
+        SpannableStringBuilder ssb = new SpannableStringBuilder(Html.fromHtml(text));
+        String clearText = Html.fromHtml(text).toString();
+        BreakIterator iterator = BreakIterator.getWordInstance(Locale.ENGLISH);
+        iterator.setText(clearText);
         int start = iterator.first();
         for (int end = iterator.next(); end != BreakIterator.DONE; start = end, end = iterator.next()) {
-            String possibleWord = text.substring(start, end);
+            String possibleWord = clearText.substring(start, end);
             if (Character.isLetterOrDigit(possibleWord.charAt(0))) {
                 ClickableSpan clickSpan = new ClickableWordSpan(possibleWord);
                 ssb.setSpan(clickSpan, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -851,12 +853,12 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
         vlcVout.detachViews();
         if (mPresentation == null) {
             vlcVout.setVideoView(mSurfaceView);
-            if (mSubtitlesSurfaceView.getVisibility() != View.GONE)
-                vlcVout.setSubtitlesView(mSubtitlesSurfaceView);
+//            if (mSubtitlesSurfaceView.getVisibility() != View.GONE)
+//                vlcVout.setSubtitlesView(mSubtitlesSurfaceView);
         } else {
             vlcVout.setVideoView(mPresentation.mSurfaceView);
-            if (mSubtitlesSurfaceView.getVisibility() != View.GONE)
-                vlcVout.setSubtitlesView(mPresentation.mSubtitlesSurfaceView);
+//            if (mSubtitlesSurfaceView.getVisibility() != View.GONE)
+//                vlcVout.setSubtitlesView(mPresentation.mSubtitlesSurfaceView);
         }
         vlcVout.addCallback(this);
         vlcVout.attachViews();
@@ -1912,15 +1914,12 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
         }
 
         SurfaceView surface;
-        SurfaceView subtitlesSurface;
         FrameLayout surfaceFrame;
         if (mPresentation == null) {
             surface = mSurfaceView;
-            subtitlesSurface = mSubtitlesSurfaceView;
             surfaceFrame = mSurfaceFrame;
         } else {
             surface = mPresentation.mSurfaceView;
-            subtitlesSurface = mPresentation.mSubtitlesSurfaceView;
             surfaceFrame = mPresentation.mSurfaceFrame;
         }
 
@@ -1929,8 +1928,6 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
         lp.width = (int) Math.ceil(dw * mVideoWidth / mVideoVisibleWidth);
         lp.height = (int) Math.ceil(dh * mVideoHeight / mVideoVisibleHeight);
         surface.setLayoutParams(lp);
-        if (subtitlesSurface != null)
-            subtitlesSurface.setLayoutParams(lp);
 
         // set frame size (crop if necessary)
         lp = surfaceFrame.getLayoutParams();
@@ -1939,8 +1936,6 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
         surfaceFrame.setLayoutParams(lp);
 
         surface.invalidate();
-        if (subtitlesSurface != null)
-            subtitlesSurface.invalidate();
     }
 
     private void sendMouseEvent(int action, int button, int x, int y) {
@@ -3092,13 +3087,6 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
 
     @SuppressWarnings({"unchecked"})
     public void getSubtitles() {
-        try {
-            subs = suber().parse(new File("/storage/emulated/0/Download/example_video.srt")).subs;
-            reInitSubChanger();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
         final String subtitleList_serialized = mSettings.getString(PreferencesActivity.VIDEO_SUBTITLE_FILES, null);
         VLCApplication.runBackground(() -> {
             ArrayList<String> prefsList = new ArrayList<>();
@@ -3120,14 +3108,43 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
             // Add any selected subtitle file from the file picker
             if (mSubtitleSelectedFiles.size() > 0) {
                 mHandler.post(() -> {
-                    if (mService != null)
-                        for (String file : mSubtitleSelectedFiles) {
-                            Log.i(TAG, "Adding user-selected subtitle " + file);
-                            mService.addSubtitleTrack(file, true);
-                        }
+                    try {
+//                        String subPath = findSubPath(mUri.getPath());
+                        subs = suber().parse(new File(mSubtitleSelectedFiles.get(0))).subs;
+                        reInitSubChanger();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+//
+//                    if (mService != null)
+//                        for (String file : mSubtitleSelectedFiles) {
+//                            Log.i(TAG, "Adding user-selected subtitle " + file);
+//                            mService.addSubtitleTrack(file, true);
+//                        }
                 });
             }
         });
+    }
+
+    @Nullable
+    private String findSubPath(String videoPath) {
+        Matcher matcher = SUB_FILE_PATH_PATTERN.matcher(videoPath);
+        if (matcher.find()) {
+            String dir = matcher.group(1);
+            String fileName = matcher.group(2);
+
+            File dirFile = new File(dir);
+            if (dirFile.isDirectory()) {
+                for (File file : dirFile.listFiles()) {
+                    String name = file.getName();
+                    String fileNameWithoutExt = name.replaceFirst("[.][^.]+$", "");
+                    if (fileName.equalsIgnoreCase(fileNameWithoutExt) && SUB_FILE_PATTERN.matcher(name).matches()) {
+                        return file.getAbsolutePath();
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private int getScreenRotation() {
@@ -3529,22 +3546,14 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
             TorrentStateParcel state;
 
             switch (msg.what) {
-                case TorrentTaskServiceIPC.UPDATE_STATES_ONESHOT: {
-                    b = msg.getData();
-                    b.setClassLoader(TorrentStateParcel.class.getClassLoader());
-                    break;
-                }
                 case TorrentTaskServiceIPC.UPDATE_STATE:
                     b = msg.getData();
                     b.setClassLoader(TorrentStateParcel.class.getClassLoader());
                     state = b.getParcelable(TorrentTaskServiceIPC.TAG_STATE);
-                    if (state.progress > 5 && !played) {
+                    if (state.progress > 15 && !played) {
                         loadMedia();
                         played = true;
                     }
-                    break;
-                case TorrentTaskServiceIPC.TERMINATE_ALL_CLIENTS:
-                    finish();
                     break;
                 case TorrentTaskServiceIPC.TORRENTS_ADDED: {
                     b = msg.getData();
