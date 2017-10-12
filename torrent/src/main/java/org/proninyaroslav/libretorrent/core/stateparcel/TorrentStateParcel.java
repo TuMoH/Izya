@@ -50,6 +50,7 @@ public class TorrentStateParcel extends AbstractStateParcel<TorrentStateParcel>
     public long ETA = -1L;
     public long[] filesReceivedBytes = new long[0];
     public double shareRatio = 0.;
+    public boolean isReadyForPlaing = false;
 
     boolean equalsById = false;
 
@@ -73,7 +74,7 @@ public class TorrentStateParcel extends AbstractStateParcel<TorrentStateParcel>
                               long totalBytes, long downloadSpeed, long uploadSpeed,
                               long ETA, long[] filesReceivedBytes, int totalSeeds,
                               int seeds, int totalPeers, int peers, int downloadedPieces,
-                              double shareRatio)
+                              double shareRatio, boolean isReadyForPlaing)
     {
         super(torrentId);
 
@@ -94,6 +95,7 @@ public class TorrentStateParcel extends AbstractStateParcel<TorrentStateParcel>
         this.totalPeers = totalPeers;
         this.downloadedPieces = downloadedPieces;
         this.shareRatio = shareRatio;
+        this.isReadyForPlaing = isReadyForPlaing;
     }
 
     public TorrentStateParcel(Parcel source)
@@ -117,6 +119,7 @@ public class TorrentStateParcel extends AbstractStateParcel<TorrentStateParcel>
         totalPeers = source.readInt();
         downloadedPieces = source.readInt();
         shareRatio = source.readDouble();
+        isReadyForPlaing = source.readByte() != 0;
     }
 
     @Override
@@ -147,6 +150,7 @@ public class TorrentStateParcel extends AbstractStateParcel<TorrentStateParcel>
         dest.writeInt(totalPeers);
         dest.writeInt(downloadedPieces);
         dest.writeDouble(shareRatio);
+        dest.writeByte((byte) (isReadyForPlaing ? 1 : 0));
     }
 
     public static final Parcelable.Creator<TorrentStateParcel> CREATOR =
@@ -206,6 +210,7 @@ public class TorrentStateParcel extends AbstractStateParcel<TorrentStateParcel>
         result = prime * result + peers;
         result = prime * result + totalPeers;
         result = prime * result + downloadedPieces;
+        result = prime * result + (isReadyForPlaing ? 1 : 0);
         long shareRationBits = Double.doubleToLongBits(shareRatio);
         result = prime * result + (int) (shareRationBits ^ (shareRationBits >>> 32));
 
@@ -246,7 +251,8 @@ public class TorrentStateParcel extends AbstractStateParcel<TorrentStateParcel>
                 uploadSpeed == state.uploadSpeed &&
                 ETA == state.ETA &&
                 Arrays.equals(filesReceivedBytes, state.filesReceivedBytes) &&
-                shareRatio == state.shareRatio;
+                shareRatio == state.shareRatio &&
+                isReadyForPlaing == state.isReadyForPlaing;
     }
 
     @Override
@@ -270,6 +276,7 @@ public class TorrentStateParcel extends AbstractStateParcel<TorrentStateParcel>
                 ", ETA=" + ETA +
                 ", filesReceivedBytes=" + Arrays.toString(filesReceivedBytes) +
                 ", shareRatio=" + shareRatio +
+                ", isReadyForPlaing=" + isReadyForPlaing +
                 '}';
     }
 }

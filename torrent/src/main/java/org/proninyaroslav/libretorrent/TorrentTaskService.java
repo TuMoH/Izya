@@ -252,10 +252,11 @@ public class TorrentTaskService extends Service
 
     @Override
     public void onEngineStarted() {
-        if (torrentTasks.isEmpty()) {
-            List<Torrent> torrents = repo.getAll();
-            loadTorrents(torrents);
-        }
+        // TODO: 13.10.17 вернуть!!!
+//        if (torrentTasks.isEmpty()) {
+//            List<Torrent> torrents = repo.getAll();
+//            loadTorrents(torrents);
+//        }
 
         /* Set current port */
         pref.put(getString(R.string.pref_key_port), engineTask.getEngine().getPort());
@@ -881,7 +882,8 @@ public class TorrentTaskService extends Service
                 task.getTotalPeers(),
                 task.getConnectedPeers(),
                 task.getNumDownloadedPieces(),
-                task.getShareRatio());
+                task.getShareRatio(),
+                task.isReadyForPlaing());
     }
 
     private ArrayList<TrackerStateParcel> makeTrackerStateParcelList(TorrentDownload task) {

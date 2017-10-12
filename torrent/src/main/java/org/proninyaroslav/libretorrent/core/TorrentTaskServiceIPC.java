@@ -22,7 +22,6 @@ package org.proninyaroslav.libretorrent.core;
 import android.os.Bundle;
 import android.os.Message;
 import android.os.Messenger;
-import android.os.Parcelable;
 import android.os.RemoteException;
 
 import org.proninyaroslav.libretorrent.core.stateparcel.PeerStateParcel;
@@ -36,8 +35,7 @@ import java.util.Collection;
  * The interface for interprocess communication with TorrentTaskService.
  */
 
-public class TorrentTaskServiceIPC
-{
+public class TorrentTaskServiceIPC {
     @SuppressWarnings("unused")
     private static final String TAG = TorrentTaskServiceIPC.class.getSimpleName();
 
@@ -182,8 +180,7 @@ public class TorrentTaskServiceIPC
     public static final int GET_SPEED_LIMIT = 27;
 
     public void sendClientConnect(Messenger serviceCallback,
-                                  Messenger clientCallback) throws RemoteException
-    {
+                                  Messenger clientCallback) throws RemoteException {
         if (clientCallback == null || serviceCallback == null) {
             return;
         }
@@ -195,8 +192,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendClientDisconnect(Messenger serviceCallback,
-                                     Messenger clientCallback) throws RemoteException
-    {
+                                     Messenger clientCallback) throws RemoteException {
         if (clientCallback == null || serviceCallback == null) {
             return;
         }
@@ -208,8 +204,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendTorrentStateOneShot(Messenger clientCallback,
-                                        Bundle states) throws RemoteException
-    {
+                                        Bundle states) throws RemoteException {
         if (clientCallback == null) {
             return;
         }
@@ -221,8 +216,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendTorrentStateOneShot(Messenger serviceCallback,
-                                        Messenger clientCallback) throws RemoteException
-    {
+                                        Messenger clientCallback) throws RemoteException {
         if (serviceCallback == null || clientCallback == null) {
             return;
         }
@@ -234,8 +228,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendAddTorrents(Messenger serviceCallback,
-                                ArrayList<Torrent> torrents) throws RemoteException
-    {
+                                ArrayList<Torrent> torrents) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
@@ -248,8 +241,7 @@ public class TorrentTaskServiceIPC
 
     public void sendTorrentsAdded(Messenger serviceCallback,
                                   ArrayList<TorrentStateParcel> states,
-                                  ArrayList<Throwable> exceptions) throws RemoteException
-    {
+                                  ArrayList<Throwable> exceptions) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
@@ -262,8 +254,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendUpdateState(Messenger clientCallback,
-                                TorrentStateParcel state) throws RemoteException
-    {
+                                TorrentStateParcel state) throws RemoteException {
         if (clientCallback == null) {
             return;
         }
@@ -275,8 +266,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendUpdateState(Messenger serviceCallback,
-                                String torrentId) throws RemoteException
-    {
+                                String torrentId) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
@@ -287,8 +277,7 @@ public class TorrentTaskServiceIPC
         serviceCallback.send(msg);
     }
 
-    public void sendTerminateAllClients(Collection<Messenger> clientCallbacks)
-    {
+    public void sendTerminateAllClients(Collection<Messenger> clientCallbacks) {
         if (clientCallbacks == null) {
             return;
         }
@@ -305,8 +294,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendPauseResumeTorrents(Messenger serviceCallback,
-                                        ArrayList<String> torrentIds) throws RemoteException
-    {
+                                        ArrayList<String> torrentIds) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
@@ -319,8 +307,7 @@ public class TorrentTaskServiceIPC
 
     public void sendDeleteTorrents(Messenger serviceCallback,
                                    ArrayList<String> torrentIds,
-                                   boolean withFiles) throws RemoteException
-    {
+                                   boolean withFiles) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
@@ -334,8 +321,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendForceRecheck(Messenger serviceCallback,
-                                 ArrayList<String> torrentIds) throws RemoteException
-    {
+                                 ArrayList<String> torrentIds) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
@@ -347,8 +333,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendForceAnnounce(Messenger serviceCallback,
-                                  ArrayList<String> torrentIds) throws RemoteException
-    {
+                                  ArrayList<String> torrentIds) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
@@ -361,8 +346,7 @@ public class TorrentTaskServiceIPC
 
     public void sendGetTorrentInfo(Messenger serviceCallback,
                                    Messenger clientCallback,
-                                   String torrentId) throws RemoteException
-    {
+                                   String torrentId) throws RemoteException {
         if (serviceCallback == null || clientCallback == null) {
             return;
         }
@@ -375,8 +359,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendGetTorrentInfo(Messenger clientCallback,
-                                   TorrentMetaInfo info) throws RemoteException
-    {
+                                   TorrentMetaInfo info) throws RemoteException {
         if (clientCallback == null) {
             return;
         }
@@ -388,8 +371,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendSetTorrentName(Messenger serviceCallback,
-                                   String torrentId, String torrentName) throws RemoteException
-    {
+                                   String torrentId, String torrentName) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
@@ -402,8 +384,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendSetDownloadPath(Messenger serviceCallback,
-                                    ArrayList<String> torrentIds, String path) throws RemoteException
-    {
+                                    ArrayList<String> torrentIds, String path) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
@@ -416,8 +397,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendSetSequentialDownload(Messenger serviceCallback,
-                                          String torrentId, boolean sequential) throws RemoteException
-    {
+                                          String torrentId, boolean sequential) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
@@ -431,8 +411,7 @@ public class TorrentTaskServiceIPC
 
     public void sendChangeFilesPriority(Messenger serviceCallback,
                                         String torrentId,
-                                        ArrayList<Integer> priorities) throws RemoteException
-    {
+                                        ArrayList<Integer> priorities) throws RemoteException {
         if (serviceCallback == null || priorities == null) {
             return;
         }
@@ -446,8 +425,7 @@ public class TorrentTaskServiceIPC
 
     public void sendGetActiveAndSeedingTime(Messenger serviceCallback,
                                             Messenger clientCallback,
-                                            String torrentId) throws RemoteException
-    {
+                                            String torrentId) throws RemoteException {
         if (serviceCallback == null || clientCallback == null) {
             return;
         }
@@ -461,8 +439,7 @@ public class TorrentTaskServiceIPC
 
     public void sendGetActiveAndSeedingTime(Messenger clientCallback,
                                             long activeTime,
-                                            long seedingTime) throws RemoteException
-    {
+                                            long seedingTime) throws RemoteException {
         if (clientCallback == null) {
             return;
         }
@@ -476,8 +453,7 @@ public class TorrentTaskServiceIPC
 
     public void sendGetTrackersStates(Messenger serviceCallback,
                                       Messenger clientCallback,
-                                      String torrentId) throws RemoteException
-    {
+                                      String torrentId) throws RemoteException {
         if (serviceCallback == null || clientCallback == null) {
             return;
         }
@@ -490,8 +466,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendGetTrackersStates(Messenger clientCallback,
-                                      ArrayList<TrackerStateParcel> states) throws RemoteException
-    {
+                                      ArrayList<TrackerStateParcel> states) throws RemoteException {
         if (clientCallback == null) {
             return;
         }
@@ -504,8 +479,7 @@ public class TorrentTaskServiceIPC
 
     public void sendReplaceTrackers(Messenger serviceCallback,
                                     String torrentId,
-                                    ArrayList<String> urls) throws RemoteException
-    {
+                                    ArrayList<String> urls) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
@@ -519,8 +493,7 @@ public class TorrentTaskServiceIPC
 
     public void sendAddTrackers(Messenger serviceCallback,
                                 String torrentId,
-                                ArrayList<String> urls) throws RemoteException
-    {
+                                ArrayList<String> urls) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
@@ -534,8 +507,7 @@ public class TorrentTaskServiceIPC
 
     public void sendGetPeersStates(Messenger serviceCallback,
                                    Messenger clientCallback,
-                                   String torrentId) throws RemoteException
-    {
+                                   String torrentId) throws RemoteException {
         if (serviceCallback == null || clientCallback == null) {
             return;
         }
@@ -548,8 +520,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendGetPeersStates(Messenger clientCallback,
-                                   ArrayList<PeerStateParcel> states) throws RemoteException
-    {
+                                   ArrayList<PeerStateParcel> states) throws RemoteException {
         if (clientCallback == null) {
             return;
         }
@@ -562,8 +533,7 @@ public class TorrentTaskServiceIPC
 
     public void sendGetPieces(Messenger serviceCallback,
                               Messenger clientCallback,
-                              String torrentId) throws RemoteException
-    {
+                              String torrentId) throws RemoteException {
         if (serviceCallback == null || clientCallback == null) {
             return;
         }
@@ -576,8 +546,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendGetPieces(Messenger clientCallback,
-                              boolean[] pieces) throws RemoteException
-    {
+                              boolean[] pieces) throws RemoteException {
         if (clientCallback == null) {
             return;
         }
@@ -590,8 +559,7 @@ public class TorrentTaskServiceIPC
 
     public void sendGetMagnet(Messenger serviceCallback,
                               Messenger clientCallback,
-                              String torrentId) throws RemoteException
-    {
+                              String torrentId) throws RemoteException {
         if (serviceCallback == null || clientCallback == null) {
             return;
         }
@@ -604,8 +572,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendGetMagnet(Messenger clientCallback,
-                              String magnet) throws RemoteException
-    {
+                              String magnet) throws RemoteException {
         if (clientCallback == null) {
             return;
         }
@@ -618,8 +585,7 @@ public class TorrentTaskServiceIPC
 
     public void sendSetUploadSpeedLimit(Messenger serviceCallback,
                                         String torrentId,
-                                        int limit) throws RemoteException
-    {
+                                        int limit) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
@@ -632,8 +598,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendSetUploadSpeedLimit(Messenger serviceCallback,
-                                        int limit) throws RemoteException
-    {
+                                        int limit) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
@@ -646,8 +611,7 @@ public class TorrentTaskServiceIPC
 
     public void sendSetDownloadSpeedLimit(Messenger serviceCallback,
                                           String torrentId,
-                                          int limit) throws RemoteException
-    {
+                                          int limit) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
@@ -660,8 +624,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendSetDownloadSpeedLimit(Messenger serviceCallback,
-                                          int limit) throws RemoteException
-    {
+                                          int limit) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
@@ -674,8 +637,7 @@ public class TorrentTaskServiceIPC
 
     public void sendGetSpeedLimit(Messenger serviceCallback,
                                   Messenger clientCallback,
-                                  String torrentId) throws RemoteException
-    {
+                                  String torrentId) throws RemoteException {
         if (serviceCallback == null || clientCallback == null) {
             return;
         }
@@ -688,8 +650,7 @@ public class TorrentTaskServiceIPC
     }
 
     public void sendGetSpeedLimit(Messenger serviceCallback,
-                                  Messenger clientCallback) throws RemoteException
-    {
+                                  Messenger clientCallback) throws RemoteException {
         if (serviceCallback == null || clientCallback == null) {
             return;
         }
@@ -702,8 +663,7 @@ public class TorrentTaskServiceIPC
 
     public void sendGetSpeedLimit(Messenger clientCallback,
                                   int uploadSpeedLimit,
-                                  int downloadSpeedLimit) throws RemoteException
-    {
+                                  int downloadSpeedLimit) throws RemoteException {
         if (clientCallback == null) {
             return;
         }

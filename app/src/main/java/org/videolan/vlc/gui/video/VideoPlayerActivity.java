@@ -3115,12 +3115,12 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
-//
-//                    if (mService != null)
-//                        for (String file : mSubtitleSelectedFiles) {
-//                            Log.i(TAG, "Adding user-selected subtitle " + file);
-//                            mService.addSubtitleTrack(file, true);
-//                        }
+
+                    if (mService != null)
+                        for (String file : mSubtitleSelectedFiles) {
+                            Log.i(TAG, "Adding user-selected subtitle " + file);
+                            mService.addSubtitleTrack(file, true);
+                        }
                 });
             }
         });
@@ -3546,15 +3546,16 @@ public class VideoPlayerActivity extends AppCompatActivity implements IVLCVout.C
             TorrentStateParcel state;
 
             switch (msg.what) {
-                case TorrentTaskServiceIPC.UPDATE_STATE:
+                case TorrentTaskServiceIPC.UPDATE_STATE: {
                     b = msg.getData();
                     b.setClassLoader(TorrentStateParcel.class.getClassLoader());
                     state = b.getParcelable(TorrentTaskServiceIPC.TAG_STATE);
-                    if (state.progress > 15 && !played) {
+                    if (state.isReadyForPlaing && !played) {
                         loadMedia();
                         played = true;
                     }
                     break;
+                }
                 case TorrentTaskServiceIPC.TORRENTS_ADDED: {
                     b = msg.getData();
                     b.setClassLoader(TorrentStateParcel.class.getClassLoader());
