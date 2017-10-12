@@ -122,8 +122,6 @@ public class TorrentDownload implements TorrentDownloadInterface {
             th.setPieceDeadline(i, 0);
         }
 
-        Log.e(TAG, "piecesCount: " + piecesCount + "  startCount: " + startCount + "  endCount: " + endCount);
-
         th.prioritizePieces(priorities);
     }
 
@@ -158,17 +156,6 @@ public class TorrentDownload implements TorrentDownloadInterface {
                 case STATE_CHANGED:
                     callback.onTorrentStateChanged(torrent.getId());
 
-                    StringBuilder sb = new StringBuilder();
-                    boolean[] ar = new boolean[piecesCount];
-                    for (int i = 0; i < piecesCount; i++) {
-                        ar[i] = th.havePiece(i);
-                        if (ar[i]) {
-                            sb.append("|");
-                        } else {
-                            sb.append(".");
-                        }
-                    }
-
                     if (th.status().numPieces() >= (startCount + endCount)) {
                         isReadyForPlaing = true;
                         for (int i = 0; i < startCount; i++) {
@@ -177,7 +164,6 @@ public class TorrentDownload implements TorrentDownloadInterface {
                                 break;
                             }
                         }
-
                         if (isReadyForPlaing) {
                             for (int i = piecesCount - endCount; i < piecesCount; i++) {
                                 if (!th.havePiece(i)) {
@@ -187,10 +173,6 @@ public class TorrentDownload implements TorrentDownloadInterface {
                             }
                         }
                     }
-
-                    Log.e(TAG, th.status().numPieces() + (th.status().numPieces() < 10 ? " " : "")
-                            + "  Ready: " + (isReadyForPlaing ? "+" : "-") + "  " + sb.toString());
-
                     break;
                 case TORRENT_FINISHED:
                     callback.onTorrentFinished(torrent.getId());
