@@ -227,14 +227,15 @@ public class TorrentTaskServiceIPC {
         serviceCallback.send(msg);
     }
 
-    public void sendAddTorrents(Messenger serviceCallback,
-                                ArrayList<Torrent> torrents) throws RemoteException {
+    public void sendAddTorrent(Messenger serviceCallback, Torrent torrent) throws RemoteException {
         if (serviceCallback == null) {
             return;
         }
 
         Message msg = Message.obtain(null, ADD_TORRENTS, null);
-        msg.getData().putParcelableArrayList(TAG_TORRENTS_LIST, new ArrayList<>(torrents));
+        ArrayList<Torrent> torrents = new ArrayList<>();
+        torrents.add(torrent);
+        msg.getData().putParcelableArrayList(TAG_TORRENTS_LIST, torrents);
 
         serviceCallback.send(msg);
     }

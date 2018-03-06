@@ -27,22 +27,6 @@ import java.io.File;
 
 public class AndroidUtil {
 
-    public static boolean isHoneycombOrLater() {
-        return true;
-    }
-
-    public static boolean isJellyBeanMR2OrLater() {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2;
-    }
-
-    public static boolean isKitKatOrLater() {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT;
-    }
-
-    public static boolean isLolliPopOrLater() {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP;
-    }
-
     public static boolean isMarshMallowOrLater() {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.M;
     }

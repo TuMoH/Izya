@@ -12,7 +12,7 @@ ext {
     buildTools = '25.0.2'
     targetSdk = 25
     compileSdk = 25
-    minSdk = 17
+    minSdk = 21
 
     supportLibrary = '25.3.0'
     dagger = '2.9'

@@ -242,8 +242,7 @@ public class MainActivity extends AudioPlayerContainerActivity implements Filter
 //            item.setTitle(R.string.open);
 //        }
 
-        if (AndroidUtil.isLolliPopOrLater())
-            mNavigationView.setPadding(0, mNavigationView.getPaddingTop()/2, 0, 0);
+        mNavigationView.setPadding(0, mNavigationView.getPaddingTop()/2, 0, 0);
     }
 
     @Override
@@ -699,37 +698,10 @@ public class MainActivity extends AudioPlayerContainerActivity implements Filter
             v.setNextFocusDownId(mActionBarIconId);
             v.setNextFocusLeftId(mActionBarIconId);
             v.setNextFocusRightId(R.id.ml_menu_search);
-            if (AndroidUtil.isHoneycombOrLater())
-                v.setNextFocusForwardId(mActionBarIconId);
+            v.setNextFocusForwardId(mActionBarIconId);
             if (findViewById(R.id.ml_menu_search) != null)
                 findViewById(R.id.ml_menu_search).setNextFocusLeftId(mActionBarIconId);
         }
-    }
-
-    // Note. onKeyDown will not occur while moving within a list
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        //Filter for LG devices, see https://code.google.com/p/android/issues/detail?id=78154
-        if ((keyCode == KeyEvent.KEYCODE_MENU) &&
-                (Build.VERSION.SDK_INT <= 16) &&
-                (Build.MANUFACTURER.compareTo("LGE") == 0)) {
-            return true;
-        }
-        return super.onKeyDown(keyCode, event);
-    }
-
-    // Note. onKeyDown will not occur while moving within a list
-    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
-    @Override
-    public boolean onKeyUp(int keyCode, KeyEvent event) {
-        //Filter for LG devices, see https://code.google.com/p/android/issues/detail?id=78154
-        if ((keyCode == KeyEvent.KEYCODE_MENU) &&
-                (Build.VERSION.SDK_INT <= 16) &&
-                (Build.MANUFACTURER.compareTo("LGE") == 0)) {
-            openOptionsMenu();
-            return true;
-        }
-        return super.onKeyUp(keyCode, event);
     }
 
     private void reloadPreferences() {

@@ -289,10 +289,9 @@ public class BaseBrowserAdapter extends  RecyclerView.Adapter<RecyclerView.ViewH
 
     public void addAll(ArrayList<MediaWrapper> mediaList){
         mMediaList.clear();
-        boolean isHoneyComb = AndroidUtil.isHoneycombOrLater();
         for (MediaWrapper mw : mediaList) {
             mMediaList.add(mw);
-            if (mw.getType() == MediaWrapper.TYPE_AUDIO || (isHoneyComb && mw.getType() == MediaWrapper.TYPE_VIDEO))
+            if (mw.getType() == MediaWrapper.TYPE_AUDIO || mw.getType() == MediaWrapper.TYPE_VIDEO)
                 mMediaCount++;
         }
     }

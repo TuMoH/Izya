@@ -43,10 +43,11 @@ public class BencodeFileTreeUtils {
         BencodeFileTree parentTree = root;
         /* It allows reduce the number of iterations on the paths with equal beginnings */
         String prevPath = "";
+        List<BencodeFileItem> filesCopy = new ArrayList<>(files);
         /* Sort reduces the returns number to root */
-        Collections.sort(files);
+        Collections.sort(filesCopy);
 
-        for (BencodeFileItem file : files) {
+        for (BencodeFileItem file : filesCopy) {
             String path;
             /*
              * Compare previous path with new path.

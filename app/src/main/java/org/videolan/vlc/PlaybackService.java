@@ -384,15 +384,13 @@ public class PlaybackService extends Service implements IVLCVout.Callback {
     }
 
 
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void registerV21() {
         final IntentFilter intentFilter = new IntentFilter(AudioManager.ACTION_HDMI_AUDIO_PLUG);
         registerReceiver(mReceiverV21, intentFilter);
     }
 
-    private final BroadcastReceiver mReceiverV21 = AndroidUtil.isLolliPopOrLater() ? new BroadcastReceiver()
+    private final BroadcastReceiver mReceiverV21 = new BroadcastReceiver()
     {
-        @TargetApi(Build.VERSION_CODES.LOLLIPOP)
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
@@ -404,7 +402,7 @@ public class PlaybackService extends Service implements IVLCVout.Callback {
                     mMediaPlayer.setAudioOutputDevice(mHasHdmiAudio ? "hdmi" : "stereo");
             }
         }
-    } : null;
+    };
 
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         private boolean wasPlaying = false;
@@ -874,7 +872,7 @@ public class PlaybackService extends Service implements IVLCVout.Callback {
             notification = builder.build();
 
             startService(new Intent(this, PlaybackService.class));
-            if (!AndroidUtil.isLolliPopOrLater() || mMediaPlayer.isPlaying())
+            if (mMediaPlayer.isPlaying())
                 startForeground(3, notification);
             else {
                 stopForeground(false);

@@ -56,7 +56,7 @@ public class PreferencesUi extends BasePreferenceFragment implements SharedPrefe
         super.onCreate(savedInstanceState);
 
         findPreference("tv_ui").setVisible(true);
-        findPreference("languages_download_list").setVisible(AndroidUtil.isHoneycombOrLater());
+        findPreference("languages_download_list").setVisible(true);
     }
 
     @Override

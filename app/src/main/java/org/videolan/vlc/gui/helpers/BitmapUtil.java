@@ -151,29 +151,21 @@ public class BitmapUtil {
         return cover;
     }
 
-    @TargetApi(Build.VERSION_CODES.KITKAT)
     static boolean canUseForInBitmap(
             Bitmap candidate, BitmapFactory.Options targetOptions) {
 
         if (candidate == null)
             return false;
 
-        if (AndroidUtil.isKitKatOrLater()) {
-            if (targetOptions.inSampleSize == 0)
-                return false;
-            // From Android 4.4 (KitKat) onward we can re-use if the byte size of
-            // the new bitmap is smaller than the reusable bitmap candidate
-            // allocation byte count.
-            int width = targetOptions.outWidth / targetOptions.inSampleSize;
-            int height = targetOptions.outHeight /  targetOptions.inSampleSize;
-            int byteCount = width * height * getBytesPerPixel(candidate.getConfig());
-            return byteCount <= candidate.getAllocationByteCount();
-        }
-
-        // On earlier versions, the dimensions must match exactly and the inSampleSize must be 1
-        return candidate.getWidth() == targetOptions.outWidth
-                && candidate.getHeight() == targetOptions.outHeight
-                && targetOptions.inSampleSize == 1;
+        if (targetOptions.inSampleSize == 0)
+            return false;
+        // From Android 4.4 (KitKat) onward we can re-use if the byte size of
+        // the new bitmap is smaller than the reusable bitmap candidate
+        // allocation byte count.
+        int width = targetOptions.outWidth / targetOptions.inSampleSize;
+        int height = targetOptions.outHeight /  targetOptions.inSampleSize;
+        int byteCount = width * height * getBytesPerPixel(candidate.getConfig());
+        return byteCount <= candidate.getAllocationByteCount();
     }
 
     /**

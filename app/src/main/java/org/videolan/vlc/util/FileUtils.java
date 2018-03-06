@@ -192,17 +192,14 @@ public class FileUtils {
         return ret;
     }
 
-    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     public static boolean deleteFile (String path){
         boolean deleted = false;
         path = Uri.decode(Strings.removeFileProtocole(path));
         //Delete from Android Medialib, for consistency with device MTP storing and other apps listing content:// media
-        if (AndroidUtil.isHoneycombOrLater()){
-            ContentResolver cr = VLCApplication.getAppContext().getContentResolver();
-            String[] selectionArgs = { path };
-            deleted = cr.delete(MediaStore.Files.getContentUri("external"),
-                    MediaStore.Files.FileColumns.DATA + "=?", selectionArgs) > 0;
-        }
+        ContentResolver cr = VLCApplication.getAppContext().getContentResolver();
+        String[] selectionArgs = { path };
+        deleted = cr.delete(MediaStore.Files.getContentUri("external"),
+                MediaStore.Files.FileColumns.DATA + "=?", selectionArgs) > 0;
         File file = new File(path);
         if (file.exists())
             deleted |= file.delete();
@@ -269,10 +266,7 @@ public class FileUtils {
             return false;
         if (path.startsWith(AndroidDevices.EXTERNAL_PUBLIC_DIRECTORY))
             return true;
-        if (AndroidUtil.isKitKatOrLater())
-            return false;
-        File file = new File(path);
-        return (file.exists() && file.canWrite());
+        return false;
     }
 
     public static String computeHash(File file) {

@@ -136,23 +136,7 @@ public class HWDecoderUtil {
                     return decBySOC.dec;
             }
         }
-        /*
-         * Always try MediaCodec after JellyBean MR2,
-         * Try OMX or MediaCodec after HoneyComb depending on device properties.
-         * Otherwise, use software decoder by default.
-         */
-        if (AndroidUtil.isJellyBeanMR2OrLater())
-            return Decoder.ALL;
-        else if (AndroidUtil.isHoneycombOrLater()) {
-            for (DecoderBySOC decBySOC : sDecoderBySOCList) {
-                final String prop = getSystemPropertyCached(decBySOC.key);
-                if (prop != null) {
-                    if (prop.contains(decBySOC.value))
-                        return decBySOC.dec;
-                }
-            }
-        }
-        return Decoder.UNKNOWN;
+        return Decoder.ALL;
     }
 
     /**

@@ -83,15 +83,6 @@ public class AndroidDevices {
         return hasNavBar;
     }
 
-    /**
-     * hasCombBar test if device has Combined Bar : only for tablet with Honeycomb or ICS
-     */
-    public static boolean hasCombBar() {
-        return (!AndroidDevices.isPhone()
-                && ((VERSION.SDK_INT >= VERSION_CODES.HONEYCOMB) &&
-                (VERSION.SDK_INT <= VERSION_CODES.JELLY_BEAN)));
-    }
-
     public static boolean isPhone() {
         TelephonyManager manager = (TelephonyManager) VLCApplication.getAppContext().getSystemService(Context.TELEPHONY_SERVICE);
         return manager.getPhoneType() != TelephonyManager.PHONE_TYPE_NONE;
@@ -179,7 +170,6 @@ public class AndroidDevices {
         return list.toArray(new String[list.size()]);
     }
 
-    @TargetApi(VERSION_CODES.HONEYCOMB_MR1)
     public static float getCenteredAxis(MotionEvent event,
                                         InputDevice device, int axis) {
         final InputDevice.MotionRange range =

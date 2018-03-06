@@ -80,7 +80,7 @@
             android:id="@+id/navigation"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:paddingTop="?attr/actionBarSize"
+            android:layout_marginTop="?attr/actionBarSize"
             android:layout_gravity="start"
             app:menu="@menu/navigation"
             app:itemTextColor="?attr/navigationview_item_color"

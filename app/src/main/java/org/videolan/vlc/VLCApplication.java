@@ -29,9 +29,7 @@ import android.support.v4.app.DialogFragment;
 import android.support.v4.util.SimpleArrayMap;
 import android.util.Log;
 
-import com.timursoft.izya.di.AndroidModule;
-import com.timursoft.izya.di.AppComponent;
-import com.timursoft.izya.di.DaggerAppComponent;
+import com.timursoft.izya.http.HttpService;
 
 import org.proninyaroslav.libretorrent.core.utils.FileIOUtils;
 import org.videolan.libvlc.Dialog;
@@ -43,16 +41,23 @@ import org.videolan.vlc.media.MediaDatabase;
 import org.videolan.vlc.util.Strings;
 import org.videolan.vlc.util.VLCInstance;
 
+import java.io.File;
 import java.util.Calendar;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import okhttp3.Cache;
+import okhttp3.OkHttpClient;
+import retrofit2.Retrofit;
+import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
+import retrofit2.converter.gson.GsonConverterFactory;
+
 public class VLCApplication extends Application {
     public final static String TAG = "VLC/VLCApplication";
     private static VLCApplication instance;
-    private static AppComponent appComponent;
+    private HttpService httpService;
 
     public final static String SLEEP_INTENT = Strings.buildPkgString("SleepIntent");
 
@@ -86,15 +91,27 @@ public class VLCApplication extends Application {
             return;
         Dialog.setCallbacks(VLCInstance.get(), mDialogCallbacks);
 
-        appComponent = DaggerAppComponent.builder()
-                .androidModule(new AndroidModule(this))
-                .build();
-
         cleanTempDir();
     }
 
-    public static AppComponent getAppComponent() {
-        return appComponent;
+    public HttpService getHttpService() {
+        if (httpService == null) {
+            File cacheDir = new File(getCacheDir(), "responses");
+            int cacheSize = 10 * 1024 * 1024; // 10 MiB
+
+            OkHttpClient httpClient = new OkHttpClient.Builder()
+                    .cache(new Cache(cacheDir, cacheSize))
+                    .build();
+
+            Retrofit retrofit = new Retrofit.Builder()
+                    .baseUrl(HttpService.API_URL)
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .client(httpClient)
+                    .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
+                    .build();
+            httpService = retrofit.create(HttpService.class);
+        }
+        return httpService;
     }
 
     /**
